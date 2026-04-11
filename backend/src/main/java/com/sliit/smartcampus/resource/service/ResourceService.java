@@ -90,8 +90,20 @@ public class ResourceService {
                                                   Integer minCapacity,
                                                   EquipmentType equipmentType) {
 
-        return resourceRepository.searchResources(type, status, location, minCapacity, equipmentType)
-                .stream()
+        List<Resource> resources = resourceRepository.findAll();
+
+        List<Resource> filtered = resources.stream()
+                .filter(r -> type == null || r.getType() == type)
+                .filter(r -> status == null || r.getStatus() == status)
+                .filter(r -> location == null || location.isBlank() ||
+                        (r.getLocation() != null &&
+                                r.getLocation().toLowerCase().contains(location.toLowerCase())))
+                .filter(r -> minCapacity == null ||
+                        (r.getCapacity() != null && r.getCapacity() >= minCapacity))
+                .filter(r -> equipmentType == null || r.getEquipmentType() == equipmentType)
+                .toList();
+
+        return filtered.stream()
                 .map(this::mapToResponse)
                 .toList();
     }
