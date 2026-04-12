@@ -16,7 +16,8 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/test",
                                 "/api/auth/**",
-                                "/api/resources/**"
+                                "/api/resources/**",
+                                "/api/bookings/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
