@@ -25,13 +25,16 @@ public class AuthService {
     }
 
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String name = request.getName().trim();
+        String email = request.getEmail().trim().toLowerCase();
+
+        if (userRepository.existsByEmail(email)) {
             throw new UserAlreadyExistsException("An account with this email already exists");
         }
 
         User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
+                .name(name)
+                .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(RoleType.USER)
                 .provider(AuthProvider.LOCAL)
@@ -45,14 +48,20 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
+        String email = request.getEmail().trim().toLowerCase();
+
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 
         if (!Boolean.TRUE.equals(user.getAccountEnabled())) {
             throw new AccountDisabledException("Your account has been disabled");
         }
 
-        if (user.getPassword() == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+        if (user.getPassword() == null) {
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new InvalidCredentialsException("Invalid email or password");
         }
 
