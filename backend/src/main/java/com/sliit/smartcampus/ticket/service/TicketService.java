@@ -1,0 +1,158 @@
+package com.sliit.smartcampus.ticket.service;
+
+import com.sliit.smartcampus.common.enums.TicketStatus;
+import com.sliit.smartcampus.common.exception.ResourceNotFoundException;
+import com.sliit.smartcampus.common.exception.TicketNotFoundException;
+import com.sliit.smartcampus.resource.entity.Resource;
+import com.sliit.smartcampus.resource.repository.ResourceRepository;
+import com.sliit.smartcampus.ticket.dto.*;
+import com.sliit.smartcampus.ticket.entity.Ticket;
+import com.sliit.smartcampus.ticket.repository.TicketRepository;
+import com.sliit.smartcampus.user.entity.User;
+import com.sliit.smartcampus.user.repository.UserRepository;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class TicketService {
+
+    private final TicketRepository ticketRepository;
+    private final UserRepository userRepository;
+    private final ResourceRepository resourceRepository;
+
+    public TicketService(
+            TicketRepository ticketRepository,
+            UserRepository userRepository,
+            ResourceRepository resourceRepository
+    ) {
+        this.ticketRepository = ticketRepository;
+        this.userRepository = userRepository;
+        this.resourceRepository = resourceRepository;
+    }
+
+    public TicketResponseDto createTicket(TicketRequestDto dto) {
+        User reporter = userRepository.findById(dto.getReporterId())
+                .orElseThrow(() -> new RuntimeException("Reporter not found with id: " + dto.getReporterId()));
+
+        Resource resource = null;
+        if (dto.getResourceId() != null) {
+            resource = resourceRepository.findById(dto.getResourceId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + dto.getResourceId()));
+        }
+
+        Ticket ticket = Ticket.builder()
+                .reporter(reporter)
+                .resource(resource)
+                .locationText(dto.getLocationText().trim())
+                .category(dto.getCategory().trim())
+                .description(dto.getDescription().trim())
+                .priority(dto.getPriority())
+                .preferredContact(dto.getPreferredContact().trim())
+                .status(TicketStatus.OPEN)
+                .build();
+
+        Ticket saved = ticketRepository.save(ticket);
+        return mapToResponse(saved);
+    }
+
+    public List<TicketResponseDto> getAllTickets() {
+        return ticketRepository.findAll()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public TicketResponseDto getTicketById(Long id) {
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new TicketNotFoundException("Ticket not found with id: " + id));
+
+        return mapToResponse(ticket);
+    }
+
+    public List<TicketResponseDto> getTicketsByReporterId(Long reporterId) {
+        return ticketRepository.findByReporterId(reporterId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public List<TicketResponseDto> getTicketsByStatus(TicketStatus status) {
+        return ticketRepository.findByStatus(status)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public TicketResponseDto assignTechnician(Long ticketId, TicketAssignDto dto) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new TicketNotFoundException("Ticket not found with id: " + ticketId));
+
+        User technician = userRepository.findById(dto.getTechnicianId())
+                .orElseThrow(() -> new RuntimeException("Technician not found with id: " + dto.getTechnicianId()));
+
+        ticket.setAssignedTechnician(technician);
+
+        Ticket updated = ticketRepository.save(ticket);
+        return mapToResponse(updated);
+    }
+
+    public TicketResponseDto updateStatus(Long ticketId, TicketStatusUpdateDto dto) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new TicketNotFoundException("Ticket not found with id: " + ticketId));
+
+        validateStatusTransition(ticket.getStatus(), dto.getStatus());
+
+        ticket.setStatus(dto.getStatus());
+
+        if (dto.getResolutionNotes() != null && !dto.getResolutionNotes().isBlank()) {
+            ticket.setResolutionNotes(dto.getResolutionNotes().trim());
+        }
+
+        Ticket updated = ticketRepository.save(ticket);
+        return mapToResponse(updated);
+    }
+
+    private void validateStatusTransition(TicketStatus current, TicketStatus next) {
+        if (current == TicketStatus.CLOSED || current == TicketStatus.REJECTED) {
+            throw new IllegalArgumentException("Closed or rejected tickets cannot be changed");
+        }
+
+        if (current == TicketStatus.OPEN &&
+                !(next == TicketStatus.IN_PROGRESS || next == TicketStatus.REJECTED)) {
+            throw new IllegalArgumentException("OPEN tickets can only move to IN_PROGRESS or REJECTED");
+        }
+
+        if (current == TicketStatus.IN_PROGRESS &&
+                !(next == TicketStatus.RESOLVED || next == TicketStatus.REJECTED)) {
+            throw new IllegalArgumentException("IN_PROGRESS tickets can only move to RESOLVED or REJECTED");
+        }
+
+        if (current == TicketStatus.RESOLVED &&
+                next != TicketStatus.CLOSED) {
+            throw new IllegalArgumentException("RESOLVED tickets can only move to CLOSED");
+        }
+    }
+
+    private TicketResponseDto mapToResponse(Ticket ticket) {
+        return TicketResponseDto.builder()
+                .id(ticket.getId())
+                .reporterId(ticket.getReporter().getId())
+                .reporterName(ticket.getReporter().getName())
+                .reporterEmail(ticket.getReporter().getEmail())
+                .resourceId(ticket.getResource() != null ? ticket.getResource().getId() : null)
+                .resourceName(ticket.getResource() != null ? ticket.getResource().getName() : null)
+                .locationText(ticket.getLocationText())
+                .category(ticket.getCategory())
+                .description(ticket.getDescription())
+                .priority(ticket.getPriority())
+                .preferredContact(ticket.getPreferredContact())
+                .status(ticket.getStatus())
+                .assignedTechnicianId(ticket.getAssignedTechnician() != null ? ticket.getAssignedTechnician().getId() : null)
+                .assignedTechnicianName(ticket.getAssignedTechnician() != null ? ticket.getAssignedTechnician().getName() : null)
+                .resolutionNotes(ticket.getResolutionNotes())
+                .createdAt(ticket.getCreatedAt())
+                .updatedAt(ticket.getUpdatedAt())
+                .build();
+    }
+}

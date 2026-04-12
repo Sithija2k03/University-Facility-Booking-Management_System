@@ -17,7 +17,8 @@ public class SecurityConfig {
                                 "/api/test",
                                 "/api/auth/**",
                                 "/api/resources/**",
-                                "/api/bookings/**"
+                                "/api/bookings/**",
+                                "/api/tickets/**"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
