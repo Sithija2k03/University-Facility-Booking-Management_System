@@ -10,6 +10,7 @@ import com.sliit.smartcampus.common.enums.ResourceStatus;
 import com.sliit.smartcampus.common.exception.BookingConflictException;
 import com.sliit.smartcampus.common.exception.BookingNotFoundException;
 import com.sliit.smartcampus.common.exception.ResourceNotFoundException;
+import com.sliit.smartcampus.notification.service.NotificationService;
 import com.sliit.smartcampus.resource.entity.Resource;
 import com.sliit.smartcampus.resource.repository.ResourceRepository;
 import com.sliit.smartcampus.user.entity.User;
@@ -24,15 +25,18 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ResourceRepository resourceRepository;
+    private final NotificationService notificationService;
 
     public BookingService(
             BookingRepository bookingRepository,
             UserRepository userRepository,
-            ResourceRepository resourceRepository
+            ResourceRepository resourceRepository,
+            NotificationService notificationService
     ) {
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
         this.resourceRepository = resourceRepository;
+        this.notificationService = notificationService;
     }
 
     public BookingResponseDto createBooking(BookingRequestDto dto) {
@@ -87,6 +91,14 @@ public class BookingService {
 
         Booking saved = bookingRepository.save(booking);
 
+        notificationService.createNotification(
+                user.getId(),
+                "Booking Request Submitted",
+                "Your booking request for resource '" + resource.getName() + "' has been submitted and is pending review.",
+                "BOOKING",
+                saved.getId()
+        );
+
         return mapToResponse(saved);
     }
 
@@ -123,6 +135,15 @@ public class BookingService {
         booking.setAdminReason(dto.getReason().trim());
 
         Booking updated = bookingRepository.save(booking);
+
+        notificationService.createNotification(
+                updated.getUser().getId(),
+                "Booking Approved",
+                "Your booking for resource '" + updated.getResource().getName() + "' has been approved.",
+                "BOOKING",
+                updated.getId()
+        );
+
         return mapToResponse(updated);
     }
 
@@ -138,6 +159,15 @@ public class BookingService {
         booking.setAdminReason(dto.getReason().trim());
 
         Booking updated = bookingRepository.save(booking);
+
+        notificationService.createNotification(
+                updated.getUser().getId(),
+                "Booking Rejected",
+                "Your booking for resource '" + updated.getResource().getName() + "' was rejected. Reason: " + updated.getAdminReason(),
+                "BOOKING",
+                updated.getId()
+        );
+
         return mapToResponse(updated);
     }
 
@@ -153,6 +183,15 @@ public class BookingService {
         booking.setAdminReason(reason != null && !reason.isBlank() ? reason.trim() : "Cancelled by user");
 
         Booking updated = bookingRepository.save(booking);
+
+        notificationService.createNotification(
+                updated.getUser().getId(),
+                "Booking Cancelled",
+                "Your booking for resource '" + updated.getResource().getName() + "' has been cancelled.",
+                "BOOKING",
+                updated.getId()
+        );
+
         return mapToResponse(updated);
     }
 

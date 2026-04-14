@@ -3,6 +3,7 @@ package com.sliit.smartcampus.ticket.service;
 import com.sliit.smartcampus.common.enums.TicketStatus;
 import com.sliit.smartcampus.common.exception.ResourceNotFoundException;
 import com.sliit.smartcampus.common.exception.TicketNotFoundException;
+import com.sliit.smartcampus.notification.service.NotificationService;
 import com.sliit.smartcampus.resource.entity.Resource;
 import com.sliit.smartcampus.resource.repository.ResourceRepository;
 import com.sliit.smartcampus.ticket.dto.*;
@@ -20,15 +21,18 @@ public class TicketService {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final ResourceRepository resourceRepository;
+    private final NotificationService notificationService;
 
     public TicketService(
             TicketRepository ticketRepository,
             UserRepository userRepository,
-            ResourceRepository resourceRepository
+            ResourceRepository resourceRepository,
+            NotificationService notificationService
     ) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.resourceRepository = resourceRepository;
+        this.notificationService = notificationService;
     }
 
     public TicketResponseDto createTicket(TicketRequestDto dto) {
@@ -53,6 +57,15 @@ public class TicketService {
                 .build();
 
         Ticket saved = ticketRepository.save(ticket);
+
+        notificationService.createNotification(
+                reporter.getId(),
+                "Ticket Submitted",
+                "Your ticket has been created successfully with status OPEN.",
+                "TICKET",
+                saved.getId()
+        );
+
         return mapToResponse(saved);
     }
 
@@ -94,6 +107,23 @@ public class TicketService {
         ticket.setAssignedTechnician(technician);
 
         Ticket updated = ticketRepository.save(ticket);
+
+        notificationService.createNotification(
+                updated.getReporter().getId(),
+                "Technician Assigned",
+                "A technician has been assigned to your ticket.",
+                "TICKET",
+                updated.getId()
+        );
+
+        notificationService.createNotification(
+                technician.getId(),
+                "New Ticket Assigned",
+                "You have been assigned to ticket ID " + updated.getId() + ".",
+                "TICKET",
+                updated.getId()
+        );
+
         return mapToResponse(updated);
     }
 
@@ -101,7 +131,9 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException("Ticket not found with id: " + ticketId));
 
-        validateStatusTransition(ticket.getStatus(), dto.getStatus());
+        TicketStatus previousStatus = ticket.getStatus();
+
+        validateStatusTransition(previousStatus, dto.getStatus());
 
         ticket.setStatus(dto.getStatus());
 
@@ -110,6 +142,31 @@ public class TicketService {
         }
 
         Ticket updated = ticketRepository.save(ticket);
+
+        String message = "Your ticket status has changed from " + previousStatus + " to " + updated.getStatus() + ".";
+        if (updated.getResolutionNotes() != null && !updated.getResolutionNotes().isBlank()) {
+            message += " Notes: " + updated.getResolutionNotes();
+        }
+
+        notificationService.createNotification(
+                updated.getReporter().getId(),
+                "Ticket Status Updated",
+                message,
+                "TICKET",
+                updated.getId()
+        );
+
+        if (updated.getAssignedTechnician() != null &&
+                !updated.getAssignedTechnician().getId().equals(updated.getReporter().getId())) {
+            notificationService.createNotification(
+                    updated.getAssignedTechnician().getId(),
+                    "Ticket Status Updated",
+                    "Ticket ID " + updated.getId() + " status is now " + updated.getStatus() + ".",
+                    "TICKET",
+                    updated.getId()
+            );
+        }
+
         return mapToResponse(updated);
     }
 

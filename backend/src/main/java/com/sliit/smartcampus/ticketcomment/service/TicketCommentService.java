@@ -4,6 +4,7 @@ import com.sliit.smartcampus.common.enums.RoleType;
 import com.sliit.smartcampus.common.exception.TicketCommentNotFoundException;
 import com.sliit.smartcampus.common.exception.TicketNotFoundException;
 import com.sliit.smartcampus.common.exception.UnauthorizedCommentActionException;
+import com.sliit.smartcampus.notification.service.NotificationService;
 import com.sliit.smartcampus.ticket.entity.Ticket;
 import com.sliit.smartcampus.ticket.repository.TicketRepository;
 import com.sliit.smartcampus.ticketcomment.dto.TicketCommentRequestDto;
@@ -23,15 +24,18 @@ public class TicketCommentService {
     private final TicketCommentRepository commentRepository;
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public TicketCommentService(
             TicketCommentRepository commentRepository,
             TicketRepository ticketRepository,
-            UserRepository userRepository
+            UserRepository userRepository,
+            NotificationService notificationService
     ) {
         this.commentRepository = commentRepository;
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     public TicketCommentResponseDto addComment(Long ticketId, TicketCommentRequestDto dto) {
@@ -48,6 +52,32 @@ public class TicketCommentService {
                 .build();
 
         TicketComment saved = commentRepository.save(comment);
+
+        // Notify ticket reporter if the commenter is someone else
+        if (!ticket.getReporter().getId().equals(author.getId())) {
+            notificationService.createNotification(
+                    ticket.getReporter().getId(),
+                    "New Comment on Your Ticket",
+                    author.getName() + " commented on your ticket.",
+                    "COMMENT",
+                    ticket.getId()
+            );
+        }
+
+        // Notify assigned technician if there is one and they are not the commenter and not the reporter
+        if (ticket.getAssignedTechnician() != null
+                && !ticket.getAssignedTechnician().getId().equals(author.getId())
+                && !ticket.getAssignedTechnician().getId().equals(ticket.getReporter().getId())) {
+
+            notificationService.createNotification(
+                    ticket.getAssignedTechnician().getId(),
+                    "New Comment on Assigned Ticket",
+                    author.getName() + " added a comment on ticket ID " + ticket.getId() + ".",
+                    "COMMENT",
+                    ticket.getId()
+            );
+        }
+
         return mapToResponse(saved);
     }
 
