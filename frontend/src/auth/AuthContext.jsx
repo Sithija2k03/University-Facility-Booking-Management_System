@@ -42,6 +42,14 @@ export function AuthProvider({ children }) {
     localStorage.setItem("authCredentials", JSON.stringify(authData));
   };
 
+  const register = async (name, email, password) => {
+    await axiosClient.post("/api/auth/register", {
+      name,
+      email,
+      password,
+    });
+  };
+
   const logout = () => {
     setUser(null);
     setCredentials(null);
@@ -75,6 +83,7 @@ export function AuthProvider({ children }) {
         credentials,
         loading,
         login,
+        register,
         logout,
         buildBasicAuthHeader,
       }}
