@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 
 function LoginPage() {
@@ -28,12 +28,7 @@ function LoginPage() {
 
     try {
       await login(form.email, form.password);
-
-      // redirect will happen based on role after login
-      const lower = form.email.toLowerCase();
-      if (lower) {
-        navigate("/dashboard");
-      }
+      navigate("/dashboard");
     } catch (err) {
       setError(
         err?.response?.data?.message || "Login failed. Check your credentials."
@@ -41,6 +36,11 @@ function LoginPage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    // Placeholder for future Google OAuth integration
+    alert("Google login will be integrated later.");
   };
 
   return (
@@ -71,6 +71,18 @@ function LoginPage() {
         <button type="submit" disabled={submitting} style={styles.button}>
           {submitting ? "Logging in..." : "Login"}
         </button>
+
+        <button
+          type="button"
+          onClick={handleGoogleLogin}
+          style={styles.googleButton}
+        >
+          Continue with Google
+        </button>
+
+        <p style={styles.switchText}>
+          Do not have an account? <Link to="/register">Register</Link>
+        </p>
       </form>
     </div>
   );
@@ -84,7 +96,7 @@ const styles = {
     background: "#f5f5f5",
   },
   card: {
-    width: "350px",
+    width: "360px",
     padding: "24px",
     borderRadius: "12px",
     background: "#fff",
@@ -104,9 +116,20 @@ const styles = {
     border: "none",
     cursor: "pointer",
   },
+  googleButton: {
+    padding: "10px",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+    cursor: "pointer",
+    background: "#fff",
+  },
   error: {
     color: "red",
     margin: 0,
+  },
+  switchText: {
+    margin: 0,
+    textAlign: "center",
   },
 };
 
