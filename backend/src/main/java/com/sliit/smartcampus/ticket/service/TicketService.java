@@ -12,6 +12,8 @@ import com.sliit.smartcampus.ticket.repository.TicketRepository;
 import com.sliit.smartcampus.user.entity.User;
 import com.sliit.smartcampus.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import com.sliit.smartcampus.auth.security.SecurityUtils;
+import com.sliit.smartcampus.common.exception.UnauthorizedAccessException;
 
 import java.util.List;
 
@@ -80,10 +82,29 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new TicketNotFoundException("Ticket not found with id: " + id));
 
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.hasRole("ADMIN");
+        boolean isTechnician = SecurityUtils.hasRole("TECHNICIAN");
+
+        boolean isReporter = ticket.getReporter().getId().equals(currentUserId);
+        boolean isAssignedTechnician = ticket.getAssignedTechnician() != null &&
+                ticket.getAssignedTechnician().getId().equals(currentUserId);
+
+        if (!isReporter && !isAdmin && !isTechnician && !isAssignedTechnician) {
+            throw new UnauthorizedAccessException("You are not allowed to view this ticket");
+        }
+
         return mapToResponse(ticket);
     }
 
     public List<TicketResponseDto> getTicketsByReporterId(Long reporterId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.hasRole("ADMIN");
+
+        if (!currentUserId.equals(reporterId) && !isAdmin) {
+            throw new UnauthorizedAccessException("You are not allowed to view other users' tickets");
+        }
+
         return ticketRepository.findByReporterId(reporterId)
                 .stream()
                 .map(this::mapToResponse)

@@ -16,6 +16,8 @@ import com.sliit.smartcampus.resource.repository.ResourceRepository;
 import com.sliit.smartcampus.user.entity.User;
 import com.sliit.smartcampus.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import com.sliit.smartcampus.auth.security.SecurityUtils;
+import com.sliit.smartcampus.common.exception.UnauthorizedAccessException;
 
 import java.util.List;
 
@@ -110,6 +112,13 @@ public class BookingService {
     }
 
     public List<BookingResponseDto> getBookingsByUserId(Long userId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.hasRole("ADMIN");
+
+        if (!currentUserId.equals(userId) && !isAdmin) {
+            throw new UnauthorizedAccessException("You are not allowed to view other users' bookings");
+        }
+
         return bookingRepository.findByUserId(userId)
                 .stream()
                 .map(this::mapToResponse)
@@ -119,6 +128,13 @@ public class BookingService {
     public BookingResponseDto getBookingById(Long id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new BookingNotFoundException("Booking not found with id: " + id));
+
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.hasRole("ADMIN");
+
+        if (!booking.getUser().getId().equals(currentUserId) && !isAdmin) {
+            throw new UnauthorizedAccessException("You are not allowed to view this booking");
+        }
 
         return mapToResponse(booking);
     }
@@ -174,6 +190,13 @@ public class BookingService {
     public BookingResponseDto cancelBooking(Long id, String reason) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new BookingNotFoundException("Booking not found with id: " + id));
+
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.hasRole("ADMIN");
+
+        if (!booking.getUser().getId().equals(currentUserId) && !isAdmin) {
+            throw new UnauthorizedAccessException("You are not allowed to cancel this booking");
+        }
 
         if (booking.getStatus() != BookingStatus.APPROVED && booking.getStatus() != BookingStatus.PENDING) {
             throw new BookingConflictException("Only pending or approved bookings can be cancelled");
