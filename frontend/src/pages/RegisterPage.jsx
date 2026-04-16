@@ -13,125 +13,61 @@ function RegisterPage() {
   });
 
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleChange = (e) => {
-    setForm((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-    setSubmitting(true);
 
     try {
       await register(form.name, form.email, form.password);
-      setSuccess("Registration successful. Please login.");
-      setTimeout(() => {
-        navigate("/login");
-      }, 1200);
-    } catch (err) {
-      setError(
-        err?.response?.data?.message ||
-          "Registration failed. Please check your details."
-      );
-    } finally {
-      setSubmitting(false);
+      navigate("/login");
+    } catch {
+      setError("Registration failed");
     }
   };
 
   return (
-    <div style={styles.container}>
-      <form onSubmit={handleSubmit} style={styles.card}>
-        <h2>Create Account</h2>
+    <div className="center-container">
+      <form className="card" onSubmit={handleSubmit} style={{ width: "360px" }}>
+        <h2 style={{ textAlign: "center" }}>Create Account</h2>
 
         <input
-          type="text"
-          name="name"
-          placeholder="Full name"
+          className="input"
+          placeholder="Full Name"
           value={form.name}
-          onChange={handleChange}
-          style={styles.input}
+          onChange={(e) =>
+            setForm({ ...form, name: e.target.value })
+          }
         />
 
         <input
-          type="email"
-          name="email"
+          className="input"
           placeholder="Email"
           value={form.email}
-          onChange={handleChange}
-          style={styles.input}
+          onChange={(e) =>
+            setForm({ ...form, email: e.target.value })
+          }
         />
 
         <input
+          className="input"
           type="password"
-          name="password"
           placeholder="Password"
           value={form.password}
-          onChange={handleChange}
-          style={styles.input}
+          onChange={(e) =>
+            setForm({ ...form, password: e.target.value })
+          }
         />
 
-        {error && <p style={styles.error}>{error}</p>}
-        {success && <p style={styles.success}>{success}</p>}
+        {error && <p style={{ color: "red" }}>{error}</p>}
 
-        <button type="submit" disabled={submitting} style={styles.button}>
-          {submitting ? "Registering..." : "Register"}
-        </button>
+        <button className="button-primary">Register</button>
 
-        <p style={styles.switchText}>
+        <p style={{ textAlign: "center" }}>
           Already have an account? <Link to="/login">Login</Link>
         </p>
       </form>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    minHeight: "100vh",
-    display: "grid",
-    placeItems: "center",
-    background: "#f5f5f5",
-  },
-  card: {
-    width: "360px",
-    padding: "24px",
-    borderRadius: "12px",
-    background: "#fff",
-    boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-  },
-  input: {
-    padding: "10px",
-    borderRadius: "8px",
-    border: "1px solid #ccc",
-  },
-  button: {
-    padding: "10px",
-    borderRadius: "8px",
-    border: "none",
-    cursor: "pointer",
-  },
-  error: {
-    color: "red",
-    margin: 0,
-  },
-  success: {
-    color: "green",
-    margin: 0,
-  },
-  switchText: {
-    margin: 0,
-    textAlign: "center",
-  },
-};
 
 export default RegisterPage;
