@@ -6,16 +6,18 @@ import AuthLayout from "../components/layout/AuthLayout";
 import Button from "../components/ui/Button";
 import TextInput from "../components/ui/TextInput";
 
-function LoginPage() {
-  const { login } = useAuth();
+function RegisterPage() {
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
+    name: "",
     email: "",
     password: "",
   });
 
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
@@ -28,32 +30,41 @@ function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setSubmitting(true);
 
     try {
-      await login(form.email, form.password);
-      navigate("/dashboard");
+      await register(form.name, form.email, form.password);
+      setSuccess("Registration successful. Redirecting to login...");
+      setTimeout(() => {
+        navigate("/login");
+      }, 1200);
     } catch (err) {
       setError(
-        err?.response?.data?.message || "Login failed. Check your credentials."
+        err?.response?.data?.message ||
+          "Registration failed. Please check your details."
       );
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleGoogleLogin = () => {
-    alert("Google login will be integrated later.");
-  };
-
   return (
     <AuthLayout
-      title="Welcome back"
-      subtitle="Login to manage bookings, tickets, and campus operations."
-      sideTitle="A modern campus platform for daily operations"
-      sideText="Access your dashboard, monitor resources, manage maintenance issues, and keep workflows moving with a clean, role-aware interface."
+      title="Create account"
+      subtitle="Set up your account to access the Smart Campus platform."
+      sideTitle="One place to handle campus facilities and support"
+      sideText="Create your account and start using a streamlined system for resources, maintenance, and operations with secure role-based access."
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <TextInput
+          label="Full name"
+          name="name"
+          value={form.name}
+          onChange={handleChange}
+          placeholder="Enter your full name"
+        />
+
         <TextInput
           label="Email"
           name="email"
@@ -69,7 +80,7 @@ function LoginPage() {
           type="password"
           value={form.password}
           onChange={handleChange}
-          placeholder="Enter your password"
+          placeholder="Create a password"
         />
 
         {error ? (
@@ -82,30 +93,31 @@ function LoginPage() {
           </motion.p>
         ) : null}
 
-        <div className="pt-2 space-y-3">
+        {success ? (
+          <motion.p
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"
+          >
+            {success}
+          </motion.p>
+        ) : null}
+
+        <div className="pt-2">
           <Button
             type="submit"
             variant="primary"
             className="w-full"
             disabled={submitting}
           >
-            {submitting ? "Logging in..." : "Login"}
-          </Button>
-
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full"
-            onClick={handleGoogleLogin}
-          >
-            Continue with Google
+            {submitting ? "Creating account..." : "Register"}
           </Button>
         </div>
 
         <p className="pt-2 text-center text-sm text-slate-400">
-          Don’t have an account?{" "}
-          <Link to="/register" className="font-medium text-orange-400 hover:text-orange-300">
-            Register
+          Already have an account?{" "}
+          <Link to="/login" className="font-medium text-orange-400 hover:text-orange-300">
+            Login
           </Link>
         </p>
       </form>
@@ -113,4 +125,4 @@ function LoginPage() {
   );
 }
 
-export default LoginPage;
+export default RegisterPage;
