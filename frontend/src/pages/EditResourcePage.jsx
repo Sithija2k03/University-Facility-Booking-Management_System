@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../auth/AuthContext";
 import PageShell from "../components/layout/PageShell";
@@ -8,7 +8,8 @@ import Button from "../components/ui/Button";
 import TextInput from "../components/ui/TextInput";
 import SelectInput from "../components/ui/SelectInput";
 
-function CreateResourcePage() {
+function EditResourcePage() {
+  const { id } = useParams();
   const { credentials, buildBasicAuthHeader } = useAuth();
   const navigate = useNavigate();
 
@@ -27,8 +28,51 @@ function CreateResourcePage() {
   });
 
   const [imageFile, setImageFile] = useState(null);
-  const [error, setError] = useState("");
+  const [currentImageUrl, setCurrentImageUrl] = useState("");
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const authHeader = buildBasicAuthHeader(
+    credentials.email,
+    credentials.password
+  );
+
+  useEffect(() => {
+    const fetchResource = async () => {
+      try {
+        const response = await axiosClient.get(`/api/resources/id/${id}`, {
+          headers: {
+            Authorization: authHeader,
+          },
+        });
+
+        const resource = response.data;
+
+        setForm({
+          name: resource.name || "",
+          description: resource.description || "",
+          type: resource.type || "LAB",
+          equipmentType: resource.equipmentType || "",
+          capacity: resource.capacity ?? "",
+          location: resource.location || "",
+          building: resource.building || "",
+          floor: resource.floor || "",
+          availableFrom: resource.availableFrom || "",
+          availableTo: resource.availableTo || "",
+          status: resource.status || "ACTIVE",
+        });
+
+        setCurrentImageUrl(resource.imageUrl || "");
+      } catch (err) {
+        setError(err?.response?.data?.message || "Failed to load resource");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResource();
+  }, [id]);
 
   const handleChange = (e) => {
     setForm((prev) => ({
@@ -43,11 +87,6 @@ function CreateResourcePage() {
     setSubmitting(true);
 
     try {
-      const authHeader = buildBasicAuthHeader(
-        credentials.email,
-        credentials.password
-      );
-
       const payload = {
         ...form,
         capacity:
@@ -67,7 +106,7 @@ function CreateResourcePage() {
         formData.append("imageFile", imageFile);
       }
 
-      await axiosClient.post("/api/resources", formData, {
+      await axiosClient.put(`/api/resources/${id}`, formData, {
         headers: {
           Authorization: authHeader,
         },
@@ -75,16 +114,26 @@ function CreateResourcePage() {
 
       navigate("/resources");
     } catch (err) {
-      setError(err?.response?.data?.message || "Failed to create resource");
+      setError(err?.response?.data?.message || "Failed to update resource");
     } finally {
       setSubmitting(false);
     }
   };
 
+  if (loading) {
+    return (
+      <PageShell title="Edit Resource" subtitle="Loading resource details...">
+        <Card>
+          <p className="text-sm text-slate-400">Loading...</p>
+        </Card>
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell
-      title="Create Resource"
-      subtitle="Add a new lab, hall, meeting room, or equipment item to the system."
+      title="Edit Resource"
+      subtitle="Update the selected campus resource."
     >
       <Card className="max-w-4xl">
         <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">
@@ -93,7 +142,6 @@ function CreateResourcePage() {
             name="name"
             value={form.name}
             onChange={handleChange}
-            placeholder="Resource name"
           />
 
           <TextInput
@@ -101,7 +149,6 @@ function CreateResourcePage() {
             name="description"
             value={form.description}
             onChange={handleChange}
-            placeholder="Short description"
           />
 
           <SelectInput
@@ -141,7 +188,6 @@ function CreateResourcePage() {
               type="number"
               value={form.capacity}
               onChange={handleChange}
-              placeholder="Enter capacity"
             />
           )}
 
@@ -150,7 +196,6 @@ function CreateResourcePage() {
             name="location"
             value={form.location}
             onChange={handleChange}
-            placeholder="Location"
           />
 
           <TextInput
@@ -158,7 +203,6 @@ function CreateResourcePage() {
             name="building"
             value={form.building}
             onChange={handleChange}
-            placeholder="Building"
           />
 
           <TextInput
@@ -166,18 +210,6 @@ function CreateResourcePage() {
             name="floor"
             value={form.floor}
             onChange={handleChange}
-            placeholder="Floor"
-          />
-
-          <SelectInput
-            label="Status"
-            name="status"
-            value={form.status}
-            onChange={handleChange}
-            options={[
-              { value: "ACTIVE", label: "ACTIVE" },
-              { value: "OUT_OF_SERVICE", label: "OUT_OF_SERVICE" },
-            ]}
           />
 
           <TextInput
@@ -196,9 +228,31 @@ function CreateResourcePage() {
             onChange={handleChange}
           />
 
+          <SelectInput
+            label="Status"
+            name="status"
+            value={form.status}
+            onChange={handleChange}
+            options={[
+              { value: "ACTIVE", label: "ACTIVE" },
+              { value: "OUT_OF_SERVICE", label: "OUT_OF_SERVICE" },
+            ]}
+          />
+
           <div className="md:col-span-2 space-y-2">
+            {currentImageUrl && (
+              <img
+                src={`http://localhost:8080/${currentImageUrl.replace(/\\/g, "/")}`}
+                alt="Current resource"
+                className="h-44 w-full max-w-sm rounded-2xl object-cover border border-slate-800"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                }}
+              />
+            )}
+
             <label className="text-sm font-medium text-slate-300">
-              Browse Image
+              Replace Image
             </label>
             <input
               type="file"
@@ -216,7 +270,7 @@ function CreateResourcePage() {
 
           <div className="md:col-span-2 flex justify-end">
             <Button type="submit" variant="primary" disabled={submitting}>
-              {submitting ? "Creating..." : "Create Resource"}
+              {submitting ? "Updating..." : "Update Resource"}
             </Button>
           </div>
         </form>
@@ -225,4 +279,4 @@ function CreateResourcePage() {
   );
 }
 
-export default CreateResourcePage;
+export default EditResourcePage;

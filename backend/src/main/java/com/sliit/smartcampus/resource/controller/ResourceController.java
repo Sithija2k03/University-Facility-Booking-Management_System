@@ -9,7 +9,9 @@ import com.sliit.smartcampus.resource.service.ResourceService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -21,10 +23,13 @@ public class ResourceController {
 
     private final ResourceService resourceService;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
-    public ResourceResponse createResource(@Valid @RequestBody ResourceRequest request) {
-        return resourceService.createResource(request);
+    public ResourceResponse createResource(
+            @RequestPart("resource") @Valid ResourceRequest request,
+            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile
+    ) {
+        return resourceService.createResource(request, imageFile);
     }
 
     @GetMapping
@@ -41,15 +46,30 @@ public class ResourceController {
         return resourceService.getAllResources();
     }
 
-    @GetMapping("/{id}")
+    // Optional alias so frontend can also call /api/resources/search
+    @GetMapping("/search")
+    public List<ResourceResponse> searchResources(
+            @RequestParam(required = false) ResourceType type,
+            @RequestParam(required = false) ResourceStatus status,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) Integer minCapacity,
+            @RequestParam(required = false) EquipmentType equipmentType
+    ) {
+        return resourceService.searchResources(type, status, location, minCapacity, equipmentType);
+    }
+
+    @GetMapping("/id/{id}")
     public ResourceResponse getResourceById(@PathVariable Long id) {
         return resourceService.getResourceById(id);
     }
 
-    @PutMapping("/{id}")
-    public ResourceResponse updateResource(@PathVariable Long id,
-                                           @Valid @RequestBody ResourceRequest request) {
-        return resourceService.updateResource(id, request);
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResourceResponse updateResource(
+            @PathVariable Long id,
+            @RequestPart("resource") @Valid ResourceRequest request,
+            @RequestPart(value = "imageFile", required = false) MultipartFile imageFile
+    ) {
+        return resourceService.updateResource(id, request, imageFile);
     }
 
     @DeleteMapping("/{id}")

@@ -57,6 +57,7 @@ public class Resource {
     @Column(nullable = false)
     private ResourceStatus status;
 
+    // Stores uploaded image path
     private String imageUrl;
 
     @Column(nullable = false, updatable = false)
@@ -68,7 +69,9 @@ public class Resource {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        if (status == null) status = ResourceStatus.ACTIVE;
+        if (status == null) {
+            status = ResourceStatus.ACTIVE;
+        }
     }
 
     @PreUpdate

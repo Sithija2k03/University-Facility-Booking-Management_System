@@ -54,6 +54,30 @@ function ResourceListPage() {
     }
   };
 
+  const handleDelete = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this resource?"
+    );
+    if (!confirmed) return;
+
+    try {
+      const authHeader = buildBasicAuthHeader(
+        credentials.email,
+        credentials.password
+      );
+
+      await axiosClient.delete(`/api/resources/${id}`, {
+        headers: {
+          Authorization: authHeader,
+        },
+      });
+
+      fetchResources();
+    } catch (err) {
+      alert(err?.response?.data?.message || "Failed to delete resource");
+    }
+  };
+
   useEffect(() => {
     if (credentials) {
       fetchResources();
@@ -107,13 +131,26 @@ function ResourceListPage() {
                     <h3 className="text-lg font-semibold text-slate-100">
                       {resource.name}
                     </h3>
-                    <p className="mt-1 text-sm text-slate-400">{resource.type}</p>
+                    <p className="mt-1 text-sm text-slate-400">
+                      {resource.type}
+                    </p>
                   </div>
 
                   <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-medium text-orange-300">
                     {resource.status}
                   </span>
                 </div>
+
+                {resource.imageUrl && (
+                  <img
+                    src={`http://localhost:8080/${resource.imageUrl.replace(/\\/g, "/")}`}
+                    alt={resource.name}
+                    className="mt-4 h-44 w-full rounded-2xl object-cover border border-slate-800"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                )}
 
                 <div className="mt-4 space-y-2 text-sm text-slate-300">
                   <p>
@@ -128,7 +165,27 @@ function ResourceListPage() {
                     <span className="text-slate-500">Capacity:</span>{" "}
                     {resource.capacity ?? "-"}
                   </p>
+                  {resource.equipmentType && (
+                    <p>
+                      <span className="text-slate-500">Equipment Type:</span>{" "}
+                      {resource.equipmentType}
+                    </p>
+                  )}
                 </div>
+
+                {user?.role === "ADMIN" && (
+                  <div className="mt-5 flex gap-3">
+                    <Link to={`/resources/edit/${resource.id}`}>
+                      <Button variant="secondary">Edit</Button>
+                    </Link>
+                    <Button
+                      variant="danger"
+                      onClick={() => handleDelete(resource.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                )}
               </Card>
             </motion.div>
           ))}

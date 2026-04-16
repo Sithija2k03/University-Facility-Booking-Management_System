@@ -10,9 +10,17 @@ import com.sliit.smartcampus.resource.dto.ResourceResponse;
 import com.sliit.smartcampus.resource.entity.Resource;
 import com.sliit.smartcampus.resource.repository.ResourceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -20,8 +28,13 @@ public class ResourceService {
 
     private final ResourceRepository resourceRepository;
 
-    public ResourceResponse createResource(ResourceRequest request) {
+    @Value("${file.upload-dir}")
+    private String uploadDir;
+
+    public ResourceResponse createResource(ResourceRequest request, MultipartFile imageFile) {
         validateResourceRequest(request);
+
+        String savedImagePath = saveResourceImage(imageFile);
 
         Resource resource = Resource.builder()
                 .name(request.getName())
@@ -35,7 +48,7 @@ public class ResourceService {
                 .availableFrom(request.getAvailableFrom())
                 .availableTo(request.getAvailableTo())
                 .status(request.getStatus() != null ? request.getStatus() : ResourceStatus.ACTIVE)
-                .imageUrl(request.getImageUrl())
+                .imageUrl(savedImagePath)
                 .build();
 
         return mapToResponse(resourceRepository.save(resource));
@@ -55,7 +68,7 @@ public class ResourceService {
         return mapToResponse(resource);
     }
 
-    public ResourceResponse updateResource(Long id, ResourceRequest request) {
+    public ResourceResponse updateResource(Long id, ResourceRequest request, MultipartFile imageFile) {
         validateResourceRequest(request);
 
         Resource resource = resourceRepository.findById(id)
@@ -72,7 +85,13 @@ public class ResourceService {
         resource.setAvailableFrom(request.getAvailableFrom());
         resource.setAvailableTo(request.getAvailableTo());
         resource.setStatus(request.getStatus() != null ? request.getStatus() : resource.getStatus());
-        resource.setImageUrl(request.getImageUrl());
+
+        // If a new image is uploaded, delete old one and replace it
+        if (imageFile != null && !imageFile.isEmpty()) {
+            deletePhysicalFileIfExists(resource.getImageUrl());
+            String savedImagePath = saveResourceImage(imageFile);
+            resource.setImageUrl(savedImagePath);
+        }
 
         return mapToResponse(resourceRepository.save(resource));
     }
@@ -81,6 +100,7 @@ public class ResourceService {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + id));
 
+        deletePhysicalFileIfExists(resource.getImageUrl());
         resourceRepository.delete(resource);
     }
 
@@ -112,6 +132,9 @@ public class ResourceService {
         if (request.getType() == ResourceType.EQUIPMENT) {
             if (request.getEquipmentType() == null) {
                 throw new BadRequestException("Equipment type is required when resource type is EQUIPMENT");
+            }
+            if (request.getCapacity() != null && request.getCapacity() <= 0) {
+                throw new BadRequestException("Capacity must be greater than 0 if provided");
             }
         } else {
             if (request.getCapacity() == null || request.getCapacity() <= 0) {
@@ -147,5 +170,57 @@ public class ResourceService {
                 .createdAt(resource.getCreatedAt())
                 .updatedAt(resource.getUpdatedAt())
                 .build();
+    }
+
+    private String saveResourceImage(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !contentType.startsWith("image/")) {
+            throw new BadRequestException("Only image files are allowed for resource image upload");
+        }
+
+        long maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.getSize() > maxSize) {
+            throw new BadRequestException("Image size must not exceed 5MB");
+        }
+
+        try {
+            Path uploadPath = Paths.get(uploadDir, "resources");
+
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
+            }
+
+            String originalFileName = file.getOriginalFilename();
+            String extension = "";
+
+            if (originalFileName != null && originalFileName.contains(".")) {
+                extension = originalFileName.substring(originalFileName.lastIndexOf("."));
+            }
+
+            String storedFileName = UUID.randomUUID() + extension;
+            Path filePath = uploadPath.resolve(storedFileName);
+
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+            return filePath.toString();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to store resource image: " + e.getMessage());
+        }
+    }
+
+    private void deletePhysicalFileIfExists(String filePath) {
+        if (filePath == null || filePath.isBlank()) {
+            return;
+        }
+
+        try {
+            Files.deleteIfExists(Paths.get(filePath));
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to delete old resource image: " + e.getMessage());
+        }
     }
 }
