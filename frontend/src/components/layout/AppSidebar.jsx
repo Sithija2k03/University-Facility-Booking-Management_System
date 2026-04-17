@@ -18,6 +18,8 @@ function AppSidebar() {
 
   return (
     <aside className="hidden min-h-screen w-72 border-r border-slate-800 bg-slate-950/70 p-6 backdrop-blur lg:block">
+      
+      {/* HEADER */}
       <div className="mb-8">
         <p className="text-xs uppercase tracking-[0.25em] text-orange-400">
           Smart Campus
@@ -27,6 +29,7 @@ function AppSidebar() {
         </h2>
       </div>
 
+      {/* USER CARD */}
       <div className="mb-8 rounded-3xl border border-slate-800 bg-slate-900/70 p-4">
         <p className="text-sm font-medium text-slate-100">{user.name}</p>
         <p className="mt-1 text-xs text-slate-400">{user.email}</p>
@@ -35,6 +38,7 @@ function AppSidebar() {
         </span>
       </div>
 
+      {/* NAV */}
       <nav className="space-y-2">
         <Link
           to="/dashboard"
@@ -105,7 +109,6 @@ function AppSidebar() {
             </Link>
           </>
         )}
-
       </nav>
     </aside>
   );
