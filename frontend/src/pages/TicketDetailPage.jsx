@@ -143,6 +143,36 @@ function TicketDetailPage() {
     }
   };
 
+  const getAttachmentUrl = (att) =>
+    `http://localhost:8080/uploads/tickets/${id}/${att.storedFileName}`;
+
+  const isImageAttachment = (att) =>
+    (att.contentType || "").toLowerCase().startsWith("image/");
+
+  const handleDownloadAttachment = async (att) => {
+    try {
+      const response = await fetch(getAttachmentUrl(att), {
+        headers: { Authorization: authHeader },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to download file.");
+      }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = att.originalFileName || "attachment";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      alert(err?.message || "Failed to download attachment.");
+    }
+  };
+
   // ── render ─────────────────────────────────────────────────────────────────
   if (loading) return <p className="p-8 text-slate-400 animate-pulse">Loading ticket…</p>;
   if (error)   return <p className="p-8 text-red-400">{error}</p>;
@@ -207,8 +237,8 @@ function TicketDetailPage() {
           </h2>
           {attachments.length < 3 && (isOwner || canManage) && (
             <label className="inline-flex items-center gap-2 cursor-pointer rounded-2xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition">
-              {uploading ? "Uploading…" : "+ Upload Image"}
-              <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
+              {uploading ? "Uploading..." : "+ Upload Attachment"}
+              <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleUpload} disabled={uploading} />
             </label>
           )}
         </div>
@@ -227,22 +257,80 @@ function TicketDetailPage() {
               animate={{ opacity: 1, scale: 1 }}
               className="relative group rounded-2xl overflow-hidden border border-slate-700 bg-slate-950"
             >
-              <img
-                src={`http://localhost:8080/uploads/tickets/${id}/${att.storedFileName}`}
-                alt={att.originalFileName}
-                className="w-full h-32 object-cover"
-              />
-              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-2">
-                <p className="text-xs text-slate-200 px-2 text-center line-clamp-2">{att.originalFileName}</p>
-                {(isOwner || canManage) && (
-                  <button
-                    onClick={() => handleDeleteAttachment(att.id)}
-                    className="text-xs text-red-400 hover:text-red-300"
-                  >
-                    Delete
-                  </button>
-                )}
-              </div>
+              {isImageAttachment(att) ? (
+                <>
+                  <a href={getAttachmentUrl(att)} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={getAttachmentUrl(att)}
+                      alt={att.originalFileName}
+                      className="w-full h-32 object-cover"
+                    />
+                  </a>
+                  <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-2">
+                    <p className="text-xs text-slate-200 px-2 text-center line-clamp-2">{att.originalFileName}</p>
+                    <div className="flex items-center gap-3">
+                      <a
+                        href={getAttachmentUrl(att)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-cyan-300 hover:text-cyan-200"
+                      >
+                        Open
+                      </a>
+                      <a
+                        href={getAttachmentUrl(att)}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleDownloadAttachment(att);
+                        }}
+                        className="text-xs text-emerald-300 hover:text-emerald-200"
+                      >
+                        Download
+                      </a>
+                      {(isOwner || canManage) && (
+                        <button
+                          onClick={() => handleDeleteAttachment(att.id)}
+                          className="text-xs text-red-400 hover:text-red-300"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="p-4 h-32 flex flex-col justify-between">
+                  <p className="text-xs text-slate-200 line-clamp-2">{att.originalFileName}</p>
+                  <div className="flex items-center gap-3">
+                    <a
+                      href={getAttachmentUrl(att)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-cyan-300 hover:text-cyan-200"
+                    >
+                      Open
+                    </a>
+                    <a
+                      href={getAttachmentUrl(att)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDownloadAttachment(att);
+                      }}
+                      className="text-xs text-emerald-300 hover:text-emerald-200"
+                    >
+                      Download
+                    </a>
+                    {(isOwner || canManage) && (
+                      <button
+                        onClick={() => handleDeleteAttachment(att.id)}
+                        className="text-xs text-red-400 hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </motion.div>
           ))}
         </div>
