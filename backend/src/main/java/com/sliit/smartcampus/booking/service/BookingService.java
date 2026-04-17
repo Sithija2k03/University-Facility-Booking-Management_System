@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import com.sliit.smartcampus.auth.security.SecurityUtils;
 import com.sliit.smartcampus.common.exception.UnauthorizedAccessException;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -217,6 +218,13 @@ public class BookingService {
 
         return mapToResponse(updated);
     }
+
+    public List<BookingResponseDto> getBookingsByResourceAndDate(Long resourceId, LocalDate bookingDate) {
+    return bookingRepository.findByResourceIdAndBookingDate(resourceId, bookingDate)
+            .stream()
+            .map(this::mapToResponse)
+            .toList();
+}
 
     private void validateBookingRequest(BookingRequestDto dto) {
         if (dto.getStartTime() != null && dto.getEndTime() != null) {
