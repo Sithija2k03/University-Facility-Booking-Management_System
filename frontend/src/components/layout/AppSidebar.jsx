@@ -3,8 +3,10 @@ import { useAuth } from "../../auth/AuthContext";
 
 const linkBase =
   "flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition";
-const activeClass = "bg-orange-500 text-white shadow-[0_8px_20px_rgba(249,115,22,0.25)]";
-const inactiveClass = "text-slate-300 hover:bg-slate-800 hover:text-white";
+const activeClass =
+  "bg-orange-500 text-white shadow-[0_8px_20px_rgba(249,115,22,0.25)]";
+const inactiveClass =
+  "text-slate-300 hover:bg-slate-800 hover:text-white";
 
 function AppSidebar() {
   const { user } = useAuth();
@@ -12,19 +14,12 @@ function AppSidebar() {
 
   if (!user) return null;
 
-  const commonLinks = [
-    { to: "/dashboard", label: "Dashboard" },
-    { to: "/resources", label: "Resources" },
-  ];
-
-  const adminLinks = [
-    { to: "/resources/create", label: "Create Resource" },
-  ];
-
   const isActive = (to) => location.pathname === to;
 
   return (
     <aside className="hidden min-h-screen w-72 border-r border-slate-800 bg-slate-950/70 p-6 backdrop-blur lg:block">
+      
+      {/* HEADER */}
       <div className="mb-8">
         <p className="text-xs uppercase tracking-[0.25em] text-orange-400">
           Smart Campus
@@ -34,6 +29,7 @@ function AppSidebar() {
         </h2>
       </div>
 
+      {/* USER CARD */}
       <div className="mb-8 rounded-3xl border border-slate-800 bg-slate-900/70 p-4">
         <p className="text-sm font-medium text-slate-100">{user.name}</p>
         <p className="mt-1 text-xs text-slate-400">{user.email}</p>
@@ -42,27 +38,82 @@ function AppSidebar() {
         </span>
       </div>
 
+      {/* NAV */}
       <nav className="space-y-2">
-        {commonLinks.map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            className={`${linkBase} ${isActive(link.to) ? activeClass : inactiveClass}`}
-          >
-            {link.label}
-          </Link>
-        ))}
 
-        {user.role === "ADMIN" &&
-          adminLinks.map((link) => (
+        {/* COMMON */}
+        <Link
+          to="/dashboard"
+          className={`${linkBase} ${
+            isActive("/dashboard") ? activeClass : inactiveClass
+          }`}
+        >
+          Dashboard
+        </Link>
+
+        <Link
+          to="/resources"
+          className={`${linkBase} ${
+            isActive("/resources") ? activeClass : inactiveClass
+          }`}
+        >
+          Resources
+        </Link>
+
+        {/* BOOKINGS SECTION */}
+        <p className="mt-6 px-2 text-xs uppercase text-slate-500">
+          Booking
+        </p>
+
+        {(user.role === "USER" || user.role === "ADMIN") && (
+          <>
             <Link
-              key={link.to}
-              to={link.to}
-              className={`${linkBase} ${isActive(link.to) ? activeClass : inactiveClass}`}
+              to="/bookings/create"
+              className={`${linkBase} ${
+                isActive("/bookings/create") ? activeClass : inactiveClass
+              }`}
             >
-              {link.label}
+              Create Booking
             </Link>
-          ))}
+
+            <Link
+              to="/bookings/my"
+              className={`${linkBase} ${
+                isActive("/bookings/my") ? activeClass : inactiveClass
+              }`}
+            >
+              My Bookings
+            </Link>
+          </>
+        )}
+
+        {user.role === "ADMIN" && (
+          <>
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">
+              Admin
+            </p>
+
+            <Link
+              to="/resources/create"
+              className={`${linkBase} ${
+                isActive("/resources/create")
+                  ? activeClass
+                  : inactiveClass
+              }`}
+            >
+              Create Resource
+            </Link>
+
+            <Link
+              to="/bookings/all"
+              className={`${linkBase} ${
+                isActive("/bookings/all") ? activeClass : inactiveClass
+              }`}
+            >
+              Manage Bookings
+            </Link>
+          </>
+        )}
       </nav>
     </aside>
   );

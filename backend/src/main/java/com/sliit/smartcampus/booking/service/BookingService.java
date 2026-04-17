@@ -1,5 +1,6 @@
 package com.sliit.smartcampus.booking.service;
 
+import com.sliit.smartcampus.auth.security.SecurityUtils;
 import com.sliit.smartcampus.booking.dto.BookingDecisionDto;
 import com.sliit.smartcampus.booking.dto.BookingRequestDto;
 import com.sliit.smartcampus.booking.dto.BookingResponseDto;
@@ -10,14 +11,13 @@ import com.sliit.smartcampus.common.enums.ResourceStatus;
 import com.sliit.smartcampus.common.exception.BookingConflictException;
 import com.sliit.smartcampus.common.exception.BookingNotFoundException;
 import com.sliit.smartcampus.common.exception.ResourceNotFoundException;
+import com.sliit.smartcampus.common.exception.UnauthorizedAccessException;
 import com.sliit.smartcampus.notification.service.NotificationService;
 import com.sliit.smartcampus.resource.entity.Resource;
 import com.sliit.smartcampus.resource.repository.ResourceRepository;
 import com.sliit.smartcampus.user.entity.User;
 import com.sliit.smartcampus.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
-import com.sliit.smartcampus.auth.security.SecurityUtils;
-import com.sliit.smartcampus.common.exception.UnauthorizedAccessException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -126,6 +126,20 @@ public class BookingService {
                 .toList();
     }
 
+    public List<BookingResponseDto> getBookingsByResourceId(Long resourceId) {
+        return bookingRepository.findByResourceId(resourceId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public List<BookingResponseDto> getBookingsByResourceAndDate(Long resourceId, LocalDate bookingDate) {
+        return bookingRepository.findByResourceIdAndBookingDate(resourceId, bookingDate)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
     public BookingResponseDto getBookingById(Long id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new BookingNotFoundException("Booking not found with id: " + id));
@@ -218,15 +232,6 @@ public class BookingService {
 
         return mapToResponse(updated);
     }
-
-    public List<BookingResponseDto> getBookingsByResourceAndDate(Long resourceId, LocalDate bookingDate) {
-    return bookingRepository.findByResourceIdAndBookingDate(resourceId, bookingDate)
-            .stream()
-            .map(this::mapToResponse)
-            .toList();
-}
-
-
 
     private void validateBookingRequest(BookingRequestDto dto) {
         if (dto.getStartTime() != null && dto.getEndTime() != null) {

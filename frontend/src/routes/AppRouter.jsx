@@ -12,6 +12,9 @@ import CreateResourcePage from "../pages/CreateResourcePage";
 import EditResourcePage from "../pages/EditResourcePage";
 import { useAuth } from "../auth/AuthContext";
 import AppLayout from "../components/layout/AppLayout";
+import CreateBookingPage from "../pages/CreateBookingPage";
+import MyBookingsPage from "../pages/MyBookingsPage";
+import AllBookingsPage from "../pages/AllBookingsPage";
 
 function DashboardRouter() {
   const { user } = useAuth();
@@ -92,6 +95,7 @@ function AppRouter() {
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
+
 }
 
 
