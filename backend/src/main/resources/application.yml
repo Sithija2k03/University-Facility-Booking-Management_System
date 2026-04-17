@@ -2,9 +2,7 @@ spring:
   datasource:
     url: jdbc:postgresql://localhost:5433/smart_campus_db
     username: postgres
-
-    password: 412790354125
-
+    password: 3139
     driver-class-name: org.postgresql.Driver
 
   jpa:
