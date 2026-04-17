@@ -18,6 +18,7 @@ import com.sliit.smartcampus.resource.repository.ResourceRepository;
 import com.sliit.smartcampus.user.entity.User;
 import com.sliit.smartcampus.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -42,6 +43,7 @@ public class BookingService {
         this.notificationService = notificationService;
     }
 
+    @Transactional
     public BookingResponseDto createBooking(BookingRequestDto dto) {
         validateBookingRequest(dto);
 
@@ -76,7 +78,8 @@ public class BookingService {
             throw new BookingConflictException("A conflicting booking already exists for this resource and time range");
         }
 
-        if (resource.getCapacity() != null && dto.getExpectedAttendees() != null
+        if (resource.getCapacity() != null
+                && dto.getExpectedAttendees() != null
                 && dto.getExpectedAttendees() > resource.getCapacity()) {
             throw new BookingConflictException("Expected attendees exceed the resource capacity");
         }
@@ -105,6 +108,7 @@ public class BookingService {
         return mapToResponse(saved);
     }
 
+    @Transactional(readOnly = true)
     public List<BookingResponseDto> getAllBookings() {
         return bookingRepository.findAll()
                 .stream()
@@ -112,6 +116,7 @@ public class BookingService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<BookingResponseDto> getBookingsByUserId(Long userId) {
         Long currentUserId = SecurityUtils.getCurrentUserId();
         boolean isAdmin = SecurityUtils.hasRole("ADMIN");
@@ -126,6 +131,7 @@ public class BookingService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<BookingResponseDto> getBookingsByResourceId(Long resourceId) {
         return bookingRepository.findByResourceId(resourceId)
                 .stream()
@@ -133,6 +139,7 @@ public class BookingService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<BookingResponseDto> getBookingsByResourceAndDate(Long resourceId, LocalDate bookingDate) {
         return bookingRepository.findByResourceIdAndBookingDate(resourceId, bookingDate)
                 .stream()
@@ -140,8 +147,9 @@ public class BookingService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public BookingResponseDto getBookingById(Long id) {
-        Booking booking = bookingRepository.findById(id)
+        Booking booking = bookingRepository.findWithUserAndResourceById(id)
                 .orElseThrow(() -> new BookingNotFoundException("Booking not found with id: " + id));
 
         Long currentUserId = SecurityUtils.getCurrentUserId();
@@ -154,8 +162,9 @@ public class BookingService {
         return mapToResponse(booking);
     }
 
+    @Transactional
     public BookingResponseDto approveBooking(Long id, BookingDecisionDto dto) {
-        Booking booking = bookingRepository.findById(id)
+        Booking booking = bookingRepository.findWithUserAndResourceById(id)
                 .orElseThrow(() -> new BookingNotFoundException("Booking not found with id: " + id));
 
         if (booking.getStatus() != BookingStatus.PENDING) {
@@ -178,8 +187,9 @@ public class BookingService {
         return mapToResponse(updated);
     }
 
+    @Transactional
     public BookingResponseDto rejectBooking(Long id, BookingDecisionDto dto) {
-        Booking booking = bookingRepository.findById(id)
+        Booking booking = bookingRepository.findWithUserAndResourceById(id)
                 .orElseThrow(() -> new BookingNotFoundException("Booking not found with id: " + id));
 
         if (booking.getStatus() != BookingStatus.PENDING) {
@@ -202,8 +212,9 @@ public class BookingService {
         return mapToResponse(updated);
     }
 
+    @Transactional
     public BookingResponseDto cancelBooking(Long id, String reason) {
-        Booking booking = bookingRepository.findById(id)
+        Booking booking = bookingRepository.findWithUserAndResourceById(id)
                 .orElseThrow(() -> new BookingNotFoundException("Booking not found with id: " + id));
 
         Long currentUserId = SecurityUtils.getCurrentUserId();
@@ -218,7 +229,11 @@ public class BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        booking.setAdminReason(reason != null && !reason.isBlank() ? reason.trim() : "Cancelled by user");
+        booking.setAdminReason(
+                reason != null && !reason.isBlank()
+                        ? reason.trim()
+                        : "Cancelled by user"
+        );
 
         Booking updated = bookingRepository.save(booking);
 

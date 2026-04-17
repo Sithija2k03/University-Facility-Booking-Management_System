@@ -95,11 +95,10 @@ function AppRouter() {
         }
       />
 
-      {/* BOOKINGS */}
       <Route
         path="/bookings/create"
         element={
-          <ProtectedPage allowedRoles={["USER", "ADMIN"]}>
+          <ProtectedPage allowedRoles={["USER"]}>
             <CreateBookingPage />
           </ProtectedPage>
         }
@@ -108,7 +107,7 @@ function AppRouter() {
       <Route
         path="/bookings/my"
         element={
-          <ProtectedPage allowedRoles={["USER", "ADMIN"]}>
+          <ProtectedPage allowedRoles={["USER"]}>
             <MyBookingsPage />
           </ProtectedPage>
         }
@@ -123,7 +122,6 @@ function AppRouter() {
         }
       />
 
-      {/* DEFAULT */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
