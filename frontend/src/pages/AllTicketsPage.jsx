@@ -27,6 +27,8 @@ const STATUS_OPTIONS = ["ALL", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED", "REJ
 function AllTicketsPage() {
   const { user, credentials, buildBasicAuthHeader } = useAuth();
   const navigate = useNavigate();
+  const isAdmin = user?.role === "ADMIN";
+  const isTechnician = user?.role === "TECHNICIAN";
 
   const [tickets, setTickets] = useState([]);
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -63,11 +65,19 @@ function AllTicketsPage() {
     fetchTickets(statusFilter);
   }, [authHeader, statusFilter]);
 
+  const visibleTickets = useMemo(() => {
+    if (isAdmin) return tickets;
+    if (isTechnician) {
+      return tickets.filter((t) => t.assignedTechnicianId === user?.id);
+    }
+    return [];
+  }, [tickets, isAdmin, isTechnician, user?.id]);
+
   const filteredTickets = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return tickets;
+    if (!q) return visibleTickets;
 
-    return tickets.filter((t) => {
+    return visibleTickets.filter((t) => {
       const values = [
         String(t.id ?? ""),
         t.category ?? "",
@@ -81,13 +91,13 @@ function AllTicketsPage() {
 
       return values.some((v) => v.toLowerCase().includes(q));
     });
-  }, [search, tickets]);
+  }, [search, visibleTickets]);
 
-  if (user?.role !== "ADMIN") {
+  if (!isAdmin && !isTechnician) {
     return (
       <PageShell title="All Tickets" subtitle="Admin access required">
         <Card>
-          <p className="text-sm text-red-300">Only admins can access this page.</p>
+          <p className="text-sm text-red-300">Only admins and technicians can access this page.</p>
           <Button className="mt-4" onClick={() => navigate("/dashboard")}>Go to Dashboard</Button>
         </Card>
       </PageShell>
@@ -96,8 +106,12 @@ function AllTicketsPage() {
 
   return (
     <PageShell
-      title="All Tickets"
-      subtitle="Monitor and filter all submitted incident tickets."
+      title={isAdmin ? "All Tickets" : "Assigned Tickets"}
+      subtitle={
+        isAdmin
+          ? "Monitor and filter all submitted incident tickets."
+          : "View and filter tickets assigned to you."
+      }
       actions={
         <Button variant="secondary" onClick={() => fetchTickets(statusFilter)}>
           Refresh

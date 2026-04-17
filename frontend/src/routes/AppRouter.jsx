@@ -159,7 +159,7 @@ function AppRouter() {
       <Route
         path="/tickets/all"
         element={
-          <ProtectedPage allowedRoles={["ADMIN"]}>
+          <ProtectedPage allowedRoles={["ADMIN", "TECHNICIAN"]}>
             <AllTicketsPage />
           </ProtectedPage>
         }
