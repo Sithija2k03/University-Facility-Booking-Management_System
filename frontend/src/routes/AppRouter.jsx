@@ -15,6 +15,7 @@ import MyBookingsPage from "../pages/MyBookingsPage";
 import AllBookingsPage from "../pages/AllBookingsPage";
 import CreateTicketPage from "../pages/CreateTicketPage";
 import MyTicketsPage from "../pages/MyTicketsPage";
+import TicketDetailPage from "../pages/TicketDetailPage";
 import { useAuth } from "../auth/AuthContext";
 import AppLayout from "../components/layout/AppLayout";
 
@@ -140,6 +141,15 @@ function AppRouter() {
         element={
           <ProtectedPage allowedRoles={["USER", "ADMIN"]}>
             <MyTicketsPage />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/tickets/:id"
+        element={
+          <ProtectedPage allowedRoles={["USER", "ADMIN", "TECHNICIAN"]}>
+            <TicketDetailPage />
           </ProtectedPage>
         }
       />
