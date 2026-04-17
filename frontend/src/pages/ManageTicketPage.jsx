@@ -8,13 +8,13 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import SelectInput from "../components/ui/SelectInput";
 
-const NEXT_STATUS_BY_CURRENT = {
-  OPEN: ["IN_PROGRESS", "REJECTED"],
-  IN_PROGRESS: ["RESOLVED", "REJECTED"],
-  RESOLVED: ["CLOSED"],
-  CLOSED: [],
-  REJECTED: [],
-};
+const STATUS_OPTIONS = [
+  { value: "OPEN", label: "OPEN" },
+  { value: "IN_PROGRESS", label: "IN_PROGRESS" },
+  { value: "RESOLVED", label: "RESOLVED" },
+  { value: "CLOSED", label: "CLOSED" },
+  { value: "REJECTED", label: "REJECTED" },
+];
 
 function ManageTicketPage() {
   const { id } = useParams();
@@ -71,19 +71,11 @@ function ManageTicketPage() {
   }, [id, authHeader]);
 
   const statusOptions = useMemo(() => {
-    if (!ticket?.status) {
-      return [{ value: "", label: "Select next status" }];
-    }
-
-    const nextStatuses = NEXT_STATUS_BY_CURRENT[ticket.status] || [];
     return [
-      { value: "", label: "Select next status" },
-      ...nextStatuses.map((status) => ({
-        value: status,
-        label: status.replace("_", " "),
-      })),
+      { value: "", label: "Select status" },
+      ...STATUS_OPTIONS,
     ];
-  }, [ticket]);
+  }, []);
 
   const filteredTechnicians = useMemo(() => {
     if (!technicianSearch.trim()) return technicians;
@@ -197,6 +189,8 @@ function ManageTicketPage() {
 
   if (!ticket) return null;
 
+  const isAdmin = user?.role === "ADMIN";
+
   return (
     <PageShell
       title={`Manage Ticket #${ticket.id}`}
@@ -249,49 +243,55 @@ function ManageTicketPage() {
           Search for and select a technician to assign or reassign this ticket.
         </p>
 
-        <div className="mt-4 space-y-4">
-          <div>
-            <label className="mb-2 block text-sm font-medium text-slate-300">Search Technician</label>
-            <input
-              type="text"
-              value={technicianSearch}
-              onChange={(e) => setTechnicianSearch(e.target.value)}
-              placeholder="Search by name or email..."
-              className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-2.5 text-sm text-slate-100 outline-none transition focus:border-orange-400"
-            />
-            {filteredTechnicians.length === 0 && technicianSearch && (
-              <p className="mt-2 text-xs text-slate-500">No technicians found matching your search.</p>
-            )}
-            {filteredTechnicians.length > 0 && (
-              <p className="mt-1 text-xs text-slate-500">
-                {filteredTechnicians.length} technician{filteredTechnicians.length !== 1 ? "s" : ""} available
-              </p>
-            )}
-          </div>
+        {isAdmin ? (
+          <>
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-300">Search Technician</label>
+                <input
+                  type="text"
+                  value={technicianSearch}
+                  onChange={(e) => setTechnicianSearch(e.target.value)}
+                  placeholder="Search by name or email..."
+                  className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-2.5 text-sm text-slate-100 outline-none transition focus:border-orange-400"
+                />
+                {filteredTechnicians.length === 0 && technicianSearch && (
+                  <p className="mt-2 text-xs text-slate-500">No technicians found matching your search.</p>
+                )}
+                {filteredTechnicians.length > 0 && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    {filteredTechnicians.length} technician{filteredTechnicians.length !== 1 ? "s" : ""} available
+                  </p>
+                )}
+              </div>
 
-          <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
-            <SelectInput
-              label="Select Technician"
-              name="technicianId"
-              value={technicianId}
-              onChange={(e) => setTechnicianId(e.target.value)}
-              options={technicianOptions}
-            />
-            <Button onClick={handleAssignTechnician} disabled={assignLoading || user?.role !== "ADMIN"}>
-              {assignLoading ? "Assigning..." : "Assign"}
-            </Button>
-          </div>
-        </div>
+              <div className="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+                <SelectInput
+                  label="Select Technician"
+                  name="technicianId"
+                  value={technicianId}
+                  onChange={(e) => setTechnicianId(e.target.value)}
+                  options={technicianOptions}
+                />
+                <Button onClick={handleAssignTechnician} disabled={assignLoading}>
+                  {assignLoading ? "Assigning..." : "Assign"}
+                </Button>
+              </div>
+            </div>
 
-        {user?.role !== "ADMIN" && (
-          <p className="mt-3 text-xs text-slate-500">Only admins can assign technicians.</p>
+            <p className="mt-3 text-xs text-slate-500">Only admins can assign technicians.</p>
+          </>
+        ) : (
+          <p className="mt-3 text-xs text-slate-500">
+            Technician assignment is managed by admins.
+          </p>
         )}
       </Card>
 
       <Card>
         <h2 className="text-base font-semibold text-slate-100">Update Status</h2>
         <p className="mt-1 text-xs text-slate-500">
-          Allowed transitions follow backend rules based on the current status.
+          Choose any backend-supported status. The backend still validates allowed transitions.
         </p>
 
         <div className="mt-4 grid gap-4">
