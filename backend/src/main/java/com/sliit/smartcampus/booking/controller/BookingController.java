@@ -63,6 +63,7 @@ public class BookingController {
          return bookingService.getBookingsByUserId(id);
 }
 
+
 @GetMapping("/resource/{id}/date/{bookingDate}")
 public List<BookingResponseDto> getBookingsByResourceAndDate(
         @PathVariable Long id,
@@ -70,4 +71,6 @@ public List<BookingResponseDto> getBookingsByResourceAndDate(
 ) {
     return bookingService.getBookingsByResourceAndDate(id, bookingDate);
 }
+
+
 }
