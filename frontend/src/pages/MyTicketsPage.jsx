@@ -16,10 +16,10 @@ const STATUS_STYLES = {
 };
 
 const PRIORITY_STYLES = {
-  LOW:      "text-slate-400",
-  MEDIUM:   "text-yellow-400",
-  HIGH:     "text-orange-400",
-  CRITICAL: "text-red-400 font-semibold",
+  LOW: "bg-slate-500/15 text-slate-300 border-slate-500/30",
+  MEDIUM: "bg-yellow-500/15 text-yellow-300 border-yellow-500/30",
+  HIGH: "bg-orange-500/15 text-orange-300 border-orange-500/30",
+  CRITICAL: "bg-red-500/15 text-red-300 border-red-500/30",
 };
 
 function MyTicketsPage() {
@@ -94,7 +94,9 @@ function MyTicketsPage() {
                     >
                       {ticket.status.replace("_", " ")}
                     </span>
-                    <span className={`text-xs font-medium ${PRIORITY_STYLES[ticket.priority] ?? ""}`}>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${PRIORITY_STYLES[ticket.priority] ?? ""}`}
+                    >
                       {ticket.priority}
                     </span>
                   </div>
@@ -107,6 +109,12 @@ function MyTicketsPage() {
                     <p className="text-xs text-slate-400">
                       🔧 Assigned to:{" "}
                       <span className="text-orange-300">{ticket.assignedTechnicianName}</span>
+                    </p>
+                  )}
+
+                  {ticket.resolutionNotes && ticket.resolutionNotes.trim() && (
+                    <p className="text-xs text-slate-400">
+                      📝 Resolution: {ticket.resolutionNotes}
                     </p>
                   )}
                 </div>
