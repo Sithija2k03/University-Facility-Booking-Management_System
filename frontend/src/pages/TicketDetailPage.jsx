@@ -238,7 +238,7 @@ function TicketDetailPage() {
           {attachments.length < 3 && (isOwner || canManage) && (
             <label className="inline-flex items-center gap-2 cursor-pointer rounded-2xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition">
               {uploading ? "Uploading..." : "+ Upload Attachment"}
-              <input type="file" accept="image/*,application/pdf" className="hidden" onChange={handleUpload} disabled={uploading} />
+              <input type="file" accept="image/*,application/pdf,text/csv,.csv,application/vnd.ms-excel,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx,application/msword,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx" className="hidden" onChange={handleUpload} disabled={uploading} />
             </label>
           )}
         </div>

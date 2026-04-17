@@ -107,8 +107,16 @@ public class TicketAttachmentService {
         String contentType = file.getContentType();
         boolean isImage = contentType != null && contentType.startsWith("image/");
         boolean isPdf = "application/pdf".equalsIgnoreCase(contentType);
-        if (!isImage && !isPdf) {
-            throw new InvalidFileException("Only image or PDF files are allowed");
+        boolean isCsv = "text/csv".equalsIgnoreCase(contentType)
+                || "application/csv".equalsIgnoreCase(contentType)
+                || "text/plain".equalsIgnoreCase(contentType);
+        boolean isExcel = "application/vnd.ms-excel".equalsIgnoreCase(contentType)
+                || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".equalsIgnoreCase(contentType);
+        boolean isWord = "application/msword".equalsIgnoreCase(contentType)
+            || "application/vnd.openxmlformats-officedocument.wordprocessingml.document".equalsIgnoreCase(contentType);
+
+        if (!isImage && !isPdf && !isCsv && !isExcel && !isWord) {
+            throw new InvalidFileException("Only image, PDF, CSV, Excel, or Word files are allowed");
         }
 
         long maxSize = 5 * 1024 * 1024; // 5MB
