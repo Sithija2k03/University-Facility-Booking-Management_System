@@ -36,6 +36,7 @@ function ProtectedPage({ children, allowedRoles }) {
 function AppRouter() {
   return (
     <Routes>
+      {/* AUTH */}
       <Route
         path="/login"
         element={
@@ -56,6 +57,7 @@ function AppRouter() {
 
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
+      {/* DASHBOARD */}
       <Route
         path="/dashboard"
         element={
@@ -65,6 +67,7 @@ function AppRouter() {
         }
       />
 
+      {/* RESOURCES */}
       <Route
         path="/resources"
         element={
@@ -92,6 +95,7 @@ function AppRouter() {
         }
       />
 
+      {/* BOOKINGS */}
       <Route
         path="/bookings/create"
         element={
@@ -119,6 +123,7 @@ function AppRouter() {
         }
       />
 
+      {/* DEFAULT */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
