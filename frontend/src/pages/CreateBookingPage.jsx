@@ -1,33 +1,46 @@
 import { useEffect, useState } from "react";
+import DatePicker from "react-datepicker";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../auth/AuthContext";
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
-import TextInput from "../components/ui/TextInput";
 import SelectInput from "../components/ui/SelectInput";
 
 function CreateBookingPage() {
   const { credentials, user, buildBasicAuthHeader } = useAuth();
 
   const [resources, setResources] = useState([]);
+  const [bookings, setBookings] = useState([]);
+
   const [form, setForm] = useState({
     resourceId: "",
-    date: "",
+    date: null,
     startTime: "",
     endTime: "",
     purpose: "",
-    attendees: "",
   });
 
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [conflict, setConflict] = useState(false);
 
   const authHeader = buildBasicAuthHeader(
     credentials.email,
     credentials.password
   );
 
+  // ⏱ Generate time slots
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let h = 8; h <= 18; h++) {
+      slots.push(`${h.toString().padStart(2, "0")}:00`);
+    }
+    return slots;
+  };
+
+  const timeSlots = generateTimeSlots();
+
+  // 📦 Load resources
   useEffect(() => {
     const fetchResources = async () => {
       const res = await axiosClient.get("/api/resources", {
@@ -39,10 +52,46 @@ function CreateBookingPage() {
     fetchResources();
   }, []);
 
+  // 📦 Load bookings for selected resource
+  useEffect(() => {
+    if (!form.resourceId) return;
+
+    const fetchBookings = async () => {
+      const res = await axiosClient.get(
+        `/api/bookings/resource/${form.resourceId}`,
+        { headers: { Authorization: authHeader } }
+      );
+      setBookings(res.data);
+    };
+
+    fetchBookings();
+  }, [form.resourceId]);
+
+  // 🚫 Conflict detection
+  useEffect(() => {
+    if (!form.date || !form.startTime || !form.endTime) return;
+
+    const selectedDate = form.date.toISOString().split("T")[0];
+
+    const hasConflict = bookings.some((b) => {
+      if (b.date !== selectedDate) return false;
+
+      return (
+        form.startTime < b.endTime &&
+        form.endTime > b.startTime
+      );
+    });
+
+    setConflict(hasConflict);
+  }, [form, bookings]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
+
+    if (conflict) {
+      setError("Time slot conflict detected");
+      return;
+    }
 
     try {
       await axiosClient.post(
@@ -50,30 +99,28 @@ function CreateBookingPage() {
         {
           resourceId: Number(form.resourceId),
           userId: user.id,
-          date: form.date,
+          date: form.date.toISOString().split("T")[0],
           startTime: form.startTime,
           endTime: form.endTime,
           purpose: form.purpose,
-          attendees: form.attendees ? Number(form.attendees) : null,
         },
-        {
-          headers: { Authorization: authHeader },
-        }
+        { headers: { Authorization: authHeader } }
       );
 
-      setSuccess("Booking request submitted!");
+      alert("Booking created!");
     } catch (err) {
       setError(err?.response?.data?.message || "Booking failed");
     }
   };
 
   return (
-    <PageShell title="Create Booking" subtitle="Reserve a resource">
+    <PageShell title="Create Booking">
       <Card className="max-w-3xl">
-        <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">
+        <form className="grid gap-5" onSubmit={handleSubmit}>
+          
+          {/* Resource */}
           <SelectInput
             label="Resource"
-            name="resourceId"
             value={form.resourceId}
             onChange={(e) =>
               setForm({ ...form, resourceId: e.target.value })
@@ -87,50 +134,66 @@ function CreateBookingPage() {
             ]}
           />
 
-          <TextInput
-            label="Date"
-            type="date"
-            value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
-          />
-
-          <TextInput
-            label="Start Time"
-            type="time"
-            value={form.startTime}
-            onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-          />
-
-          <TextInput
-            label="End Time"
-            type="time"
-            value={form.endTime}
-            onChange={(e) => setForm({ ...form, endTime: e.target.value })}
-          />
-
-          <TextInput
-            label="Purpose"
-            value={form.purpose}
-            onChange={(e) => setForm({ ...form, purpose: e.target.value })}
-          />
-
-          <TextInput
-            label="Attendees"
-            type="number"
-            value={form.attendees}
-            onChange={(e) => setForm({ ...form, attendees: e.target.value })}
-          />
-
-          {error && (
-            <div className="md:col-span-2 text-red-400">{error}</div>
-          )}
-          {success && (
-            <div className="md:col-span-2 text-green-400">{success}</div>
-          )}
-
-          <div className="md:col-span-2 flex justify-end">
-            <Button type="submit">Create Booking</Button>
+          {/* Date Picker */}
+          <div>
+            <label className="text-sm text-slate-300">Date</label>
+            <DatePicker
+              selected={form.date}
+              onChange={(date) =>
+                setForm({ ...form, date })
+              }
+              className="input w-full"
+              minDate={new Date()}
+            />
           </div>
+
+          {/* Time selection */}
+          <SelectInput
+            label="Start Time"
+            value={form.startTime}
+            onChange={(e) =>
+              setForm({ ...form, startTime: e.target.value })
+            }
+            options={[
+              { value: "", label: "Select time" },
+              ...timeSlots.map((t) => ({ value: t, label: t })),
+            ]}
+          />
+
+          <SelectInput
+            label="End Time"
+            value={form.endTime}
+            onChange={(e) =>
+              setForm({ ...form, endTime: e.target.value })
+            }
+            options={[
+              { value: "", label: "Select time" },
+              ...timeSlots.map((t) => ({ value: t, label: t })),
+            ]}
+          />
+
+          {/* Conflict UI */}
+          {conflict && (
+            <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-red-300">
+              ⚠ Time slot already booked
+            </div>
+          )}
+
+          {/* Purpose */}
+          <input
+            className="input"
+            placeholder="Purpose"
+            value={form.purpose}
+            onChange={(e) =>
+              setForm({ ...form, purpose: e.target.value })
+            }
+          />
+
+          {error && <p className="text-red-400">{error}</p>}
+
+          <Button disabled={conflict}>
+            Create Booking
+          </Button>
         </form>
       </Card>
     </PageShell>

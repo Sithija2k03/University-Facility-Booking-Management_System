@@ -39,6 +39,7 @@ public class BookingController {
         return bookingService.getBookingsByUserId(userId);
     }
 
+
     @PatchMapping("/{id}/approve")
     public BookingResponseDto approveBooking(@PathVariable Long id, @Valid @RequestBody BookingDecisionDto dto) {
         return bookingService.approveBooking(id, dto);
@@ -56,4 +57,9 @@ public class BookingController {
     ) {
         return bookingService.cancelBooking(id, reason);
     }
+
+    @GetMapping("/resource/{id}")
+    public List<BookingResponseDto> getBookingsByResource(@PathVariable Long id)
+         return bookingService.getBookingsByUserId(id);
+}
 }
