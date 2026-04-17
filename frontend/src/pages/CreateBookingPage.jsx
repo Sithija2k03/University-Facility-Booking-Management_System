@@ -69,24 +69,38 @@ function CreateBookingPage() {
   };
 
   const getEndTimeOptions = () => {
-    if (!form.startTime) {
-      return timeSlots.map((slot) => ({
-        value: slot,
-        label: slot,
-        disabled: false,
-        booked: isSlotBooked(slot),
-      }));
-    }
+  if (!form.startTime) return [];
 
-    return timeSlots
-      .filter((slot) => slot > form.startTime)
-      .map((slot) => ({
+  const normalizedStart = normalizeTime(form.startTime);
+
+  let conflictBoundary = null;
+
+  bookings.forEach((booking) => {
+    const bookingStart = normalizeTime(booking.startTime);
+
+    if (bookingStart > normalizedStart) {
+      if (!conflictBoundary || bookingStart < conflictBoundary) {
+        conflictBoundary = bookingStart;
+      }
+    }
+  });
+
+  return timeSlots
+    .filter((slot) => slot > form.startTime)
+    .map((slot) => {
+      const normalizedSlot = normalizeTime(slot);
+
+      const disabled =
+        conflictBoundary && normalizedSlot > conflictBoundary;
+
+      return {
         value: slot,
         label: slot,
-        disabled: false,
+        disabled,
         booked: isSlotBooked(slot),
-      }));
-  };
+      };
+    });
+};
 
   const getStartTimeOptions = () => {
     return timeSlots.map((slot) => ({
@@ -250,6 +264,8 @@ function CreateBookingPage() {
               options={resourceOptions}
             />
 
+            
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300">
                 Booking Date
@@ -362,6 +378,31 @@ function CreateBookingPage() {
                 className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-orange-400"
               />
             </div>
+
+            <div
+  key={booking.id}
+  className="relative rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4"
+>
+  <div className="absolute left-0 top-0 h-full w-1 bg-red-500 rounded-l-2xl"></div>
+
+  <div className="flex items-center justify-between">
+    <p className="text-sm font-semibold text-red-300">
+      🔴 {booking.startTime} - {booking.endTime}
+    </p>
+
+    <span className="text-xs text-slate-400">
+      {booking.status}
+    </span>
+  </div>
+
+  <p className="mt-2 text-sm text-slate-200">
+    {booking.purpose}
+  </p>
+
+  <p className="mt-1 text-xs text-slate-400">
+    {booking.userName}
+  </p>
+</div>
 
             {conflict && (
               <div className="md:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
