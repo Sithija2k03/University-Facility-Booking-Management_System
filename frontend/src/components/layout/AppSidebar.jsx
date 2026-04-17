@@ -101,6 +101,17 @@ function AppSidebar() {
           Create Ticket
         </Link>
 
+        {(user.role === "USER" || user.role === "ADMIN") && (
+          <Link
+            to="/tickets/my"
+            className={`${linkBase} ${
+              isActive("/tickets/my") ? activeClass : inactiveClass
+            }`}
+          >
+            My Tickets
+          </Link>
+        )}
+
         {(user.role === "ADMIN" || user.role === "TECHNICIAN") && (
           <Link
             to="/tickets/all"
@@ -109,6 +120,17 @@ function AppSidebar() {
             }`}
           >
             {user.role === "ADMIN" ? "View All Tickets" : "Assigned Tickets"}
+          </Link>
+        )}
+
+        {(user.role === "ADMIN" || user.role === "TECHNICIAN") && (
+          <Link
+            to="/tickets/all"
+            className={`${linkBase} ${
+              isActive("/tickets/all") ? activeClass : inactiveClass
+            }`}
+          >
+            Manage Tickets
           </Link>
         )}
 
