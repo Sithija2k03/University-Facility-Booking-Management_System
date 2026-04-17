@@ -17,6 +17,7 @@ import CreateTicketPage from "../pages/CreateTicketPage";
 import MyTicketsPage from "../pages/MyTicketsPage";
 import TicketDetailPage from "../pages/TicketDetailPage";
 import AllTicketsPage from "../pages/AllTicketsPage";
+import ManageTicketPage from "../pages/ManageTicketPage";
 import { useAuth } from "../auth/AuthContext";
 import AppLayout from "../components/layout/AppLayout";
 
@@ -160,6 +161,15 @@ function AppRouter() {
         element={
           <ProtectedPage allowedRoles={["ADMIN"]}>
             <AllTicketsPage />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/tickets/:id/manage"
+        element={
+          <ProtectedPage allowedRoles={["ADMIN", "TECHNICIAN"]}>
+            <ManageTicketPage />
           </ProtectedPage>
         }
       />
