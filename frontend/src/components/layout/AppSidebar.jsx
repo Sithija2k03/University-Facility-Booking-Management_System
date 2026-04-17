@@ -87,6 +87,20 @@ function AppSidebar() {
           </>
         )}
 
+        {/* TICKETS SECTION */}
+        <p className="mt-6 px-2 text-xs uppercase text-slate-500">
+          Tickets
+        </p>
+
+        <Link
+          to="/tickets/create"
+          className={`${linkBase} ${
+            isActive("/tickets/create") ? activeClass : inactiveClass
+          }`}
+        >
+          Create Ticket
+        </Link>
+
         {user.role === "ADMIN" && (
           <>
             <p className="mt-6 px-2 text-xs uppercase text-slate-500">

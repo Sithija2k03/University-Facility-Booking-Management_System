@@ -40,6 +40,7 @@ function CreateTicketPage() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -65,6 +66,7 @@ function CreateTicketPage() {
 
     setLoading(true);
     setServerError("");
+    setSuccessMessage("");
 
     try {
       const authHeader = buildBasicAuthHeader(
@@ -73,7 +75,10 @@ function CreateTicketPage() {
       );
       const payload = { ...form, reporterId: user.id };
       const res = await createTicket(payload, authHeader);
-      navigate(`/tickets/${res.data.id}`);
+      setSuccessMessage("Ticket created successfully. Redirecting...");
+      setTimeout(() => {
+        navigate(`/tickets/${res.data.id}`);
+      }, 900);
     } catch (err) {
       setServerError(
         err?.response?.data?.message || "Failed to create ticket. Try again."
@@ -157,6 +162,16 @@ function CreateTicketPage() {
               className="rounded-xl bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400"
             >
               {serverError}
+            </motion.p>
+          )}
+
+          {successMessage && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300"
+            >
+              {successMessage}
             </motion.p>
           )}
 
