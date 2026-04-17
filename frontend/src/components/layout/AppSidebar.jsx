@@ -112,6 +112,15 @@ function AppSidebar() {
             >
               Manage Bookings
             </Link>
+
+            <Link
+              to="/tickets/all"
+              className={`${linkBase} ${
+                isActive("/tickets/all") ? activeClass : inactiveClass
+              }`}
+            >
+              View All Tickets
+            </Link>
           </>
         )}
       </nav>
