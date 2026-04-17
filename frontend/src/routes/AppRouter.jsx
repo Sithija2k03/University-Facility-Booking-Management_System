@@ -94,4 +94,39 @@ function AppRouter() {
   );
 }
 
+
+
 export default AppRouter;
+
+function AppRouter() {
+  return (
+    <>
+      <Route
+        path="/bookings/create"
+        element={
+          <ProtectedPage allowedRoles={["USER"]}>
+            <CreateBookingPage />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/bookings/my"
+        element={
+          <ProtectedPage allowedRoles={["USER"]}>
+            <MyBookingsPage />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/bookings/all"
+        element={
+          <ProtectedPage allowedRoles={["ADMIN"]}>
+            <AllBookingsPage />
+          </ProtectedPage>
+        }
+      />
+    </>
+  );
+}
