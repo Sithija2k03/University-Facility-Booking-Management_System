@@ -10,11 +10,11 @@ import UnauthorizedPage from "../pages/UnauthorizedPage";
 import ResourceListPage from "../pages/ResourceListPage";
 import CreateResourcePage from "../pages/CreateResourcePage";
 import EditResourcePage from "../pages/EditResourcePage";
-import { useAuth } from "../auth/AuthContext";
-import AppLayout from "../components/layout/AppLayout";
 import CreateBookingPage from "../pages/CreateBookingPage";
 import MyBookingsPage from "../pages/MyBookingsPage";
 import AllBookingsPage from "../pages/AllBookingsPage";
+import { useAuth } from "../auth/AuthContext";
+import AppLayout from "../components/layout/AppLayout";
 
 function DashboardRouter() {
   const { user } = useAuth();
@@ -92,23 +92,10 @@ function AppRouter() {
         }
       />
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
-  );
-
-}
-
-
-
-export default AppRouter;
-
-function AppRouter() {
-  return (
-    <>
       <Route
         path="/bookings/create"
         element={
-          <ProtectedPage allowedRoles={["USER"]}>
+          <ProtectedPage allowedRoles={["USER", "ADMIN"]}>
             <CreateBookingPage />
           </ProtectedPage>
         }
@@ -117,7 +104,7 @@ function AppRouter() {
       <Route
         path="/bookings/my"
         element={
-          <ProtectedPage allowedRoles={["USER"]}>
+          <ProtectedPage allowedRoles={["USER", "ADMIN"]}>
             <MyBookingsPage />
           </ProtectedPage>
         }
@@ -131,6 +118,10 @@ function AppRouter() {
           </ProtectedPage>
         }
       />
-    </>
+
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
 }
+
+export default AppRouter;
