@@ -10,6 +10,9 @@ import UnauthorizedPage from "../pages/UnauthorizedPage";
 import ResourceListPage from "../pages/ResourceListPage";
 import CreateResourcePage from "../pages/CreateResourcePage";
 import EditResourcePage from "../pages/EditResourcePage";
+import CreateBookingPage from "../pages/CreateBookingPage";
+import MyBookingsPage from "../pages/MyBookingsPage";
+import AllBookingsPage from "../pages/AllBookingsPage";
 import { useAuth } from "../auth/AuthContext";
 import AppLayout from "../components/layout/AppLayout";
 
@@ -85,6 +88,33 @@ function AppRouter() {
         element={
           <ProtectedPage allowedRoles={["ADMIN"]}>
             <EditResourcePage />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/bookings/create"
+        element={
+          <ProtectedPage allowedRoles={["USER"]}>
+            <CreateBookingPage />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/bookings/my"
+        element={
+          <ProtectedPage allowedRoles={["USER"]}>
+            <MyBookingsPage />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/bookings/all"
+        element={
+          <ProtectedPage allowedRoles={["ADMIN"]}>
+            <AllBookingsPage />
           </ProtectedPage>
         }
       />

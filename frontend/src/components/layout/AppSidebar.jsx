@@ -3,23 +3,16 @@ import { useAuth } from "../../auth/AuthContext";
 
 const linkBase =
   "flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition";
-const activeClass = "bg-orange-500 text-white shadow-[0_8px_20px_rgba(249,115,22,0.25)]";
-const inactiveClass = "text-slate-300 hover:bg-slate-800 hover:text-white";
+const activeClass =
+  "bg-orange-500 text-white shadow-[0_8px_20px_rgba(249,115,22,0.25)]";
+const inactiveClass =
+  "text-slate-300 hover:bg-slate-800 hover:text-white";
 
 function AppSidebar() {
   const { user } = useAuth();
   const location = useLocation();
 
   if (!user) return null;
-
-  const commonLinks = [
-    { to: "/dashboard", label: "Dashboard" },
-    { to: "/resources", label: "Resources" },
-  ];
-
-  const adminLinks = [
-    { to: "/resources/create", label: "Create Resource" },
-  ];
 
   const isActive = (to) => location.pathname === to;
 
@@ -43,26 +36,76 @@ function AppSidebar() {
       </div>
 
       <nav className="space-y-2">
-        {commonLinks.map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            className={`${linkBase} ${isActive(link.to) ? activeClass : inactiveClass}`}
-          >
-            {link.label}
-          </Link>
-        ))}
+        <Link
+          to="/dashboard"
+          className={`${linkBase} ${
+            isActive("/dashboard") ? activeClass : inactiveClass
+          }`}
+        >
+          Dashboard
+        </Link>
 
-        {user.role === "ADMIN" &&
-          adminLinks.map((link) => (
+        <Link
+          to="/resources"
+          className={`${linkBase} ${
+            isActive("/resources") ? activeClass : inactiveClass
+          }`}
+        >
+          Resources
+        </Link>
+
+        {user.role === "USER" && (
+          <>
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">
+              Booking
+            </p>
+
             <Link
-              key={link.to}
-              to={link.to}
-              className={`${linkBase} ${isActive(link.to) ? activeClass : inactiveClass}`}
+              to="/bookings/create"
+              className={`${linkBase} ${
+                isActive("/bookings/create") ? activeClass : inactiveClass
+              }`}
             >
-              {link.label}
+              Create Booking
             </Link>
-          ))}
+
+            <Link
+              to="/bookings/my"
+              className={`${linkBase} ${
+                isActive("/bookings/my") ? activeClass : inactiveClass
+              }`}
+            >
+              My Bookings
+            </Link>
+          </>
+        )}
+
+        {user.role === "ADMIN" && (
+          <>
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">
+              Admin
+            </p>
+
+            <Link
+              to="/resources/create"
+              className={`${linkBase} ${
+                isActive("/resources/create") ? activeClass : inactiveClass
+              }`}
+            >
+              Create Resource
+            </Link>
+
+            <Link
+              to="/bookings/all"
+              className={`${linkBase} ${
+                isActive("/bookings/all") ? activeClass : inactiveClass
+              }`}
+            >
+              Manage Bookings
+            </Link>
+          </>
+        )}
+
       </nav>
     </aside>
   );
