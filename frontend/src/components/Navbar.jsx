@@ -11,6 +11,10 @@ function Navbar() {
       <div style={styles.left}>
         <Link to="/dashboard">Dashboard</Link>
         <Link to="/resources">Resources</Link>
+        <Link to="/bookings/create/">Create Booking</Link>
+        <Link to="/bookings/my/">My Bookings</Link>
+
+        <Link to="/bookings/all">Manage Bookings</Link>
       </div>
 
       <div style={styles.right}>
