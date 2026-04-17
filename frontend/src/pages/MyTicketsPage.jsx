@@ -6,6 +6,8 @@ import { getMyTickets } from "../api/ticketApi";
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
+import StatusBadge from "../components/ui/StatusBadge";
+import PriorityBadge from "../components/ui/PriorityBadge";
 
 const STATUS_STYLES = {
   OPEN:        "bg-blue-500/15 text-blue-300 border-blue-500/30",
@@ -89,16 +91,8 @@ function MyTicketsPage() {
                 <div className="flex-1 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs text-slate-500">#{ticket.id}</span>
-                    <span
-                      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[ticket.status] ?? ""}`}
-                    >
-                      {ticket.status.replace("_", " ")}
-                    </span>
-                    <span
-                      className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${PRIORITY_STYLES[ticket.priority] ?? ""}`}
-                    >
-                      {ticket.priority}
-                    </span>
+                    <StatusBadge status={ticket.status} />
+                    <PriorityBadge priority={ticket.priority} />
                   </div>
 
                   <p className="text-sm font-medium text-slate-100">{ticket.category}</p>

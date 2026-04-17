@@ -15,6 +15,8 @@ import {
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
+import StatusBadge from "../components/ui/StatusBadge";
+import PriorityBadge from "../components/ui/PriorityBadge";
 
 const STATUS_STYLES = {
   OPEN:        "bg-blue-500/15 text-blue-300 border-blue-500/30",
@@ -201,12 +203,8 @@ function TicketDetailPage() {
       {/* ── TICKET INFO ── */}
       <Card>
         <div className="flex flex-wrap gap-3 mb-4">
-          <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${STATUS_STYLES[ticket.status] ?? ""}`}>
-            {ticket.status.replace("_", " ")}
-          </span>
-          <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${PRIORITY_STYLES[ticket.priority] ?? ""}`}>
-            {ticket.priority}
-          </span>
+          <StatusBadge status={ticket.status} className="px-3 py-1 text-xs" />
+          <PriorityBadge priority={ticket.priority} className="px-3 py-1 text-xs" />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
