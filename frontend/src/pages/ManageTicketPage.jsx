@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { assignTechnician, getTicketById, updateTicketStatus } from "../api/ticketApi";
+import { getUsersByRole } from "../api/userApi";
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -15,15 +16,6 @@ const NEXT_STATUS_BY_CURRENT = {
   REJECTED: [],
 };
 
-// Mock technician list (hardcoded)
-const MOCK_TECHNICIANS = [
-  { id: 1, name: "John Technician", email: "john.tech@sliit.lk" },
-  { id: 2, name: "Sarah Engineer", email: "sarah.eng@sliit.lk" },
-  { id: 3, name: "Mike Support", email: "mike.support@sliit.lk" },
-  { id: 4, name: "Emma Maintenance", email: "emma.maint@sliit.lk" },
-  { id: 5, name: "David Operations", email: "david.ops@sliit.lk" },
-];
-
 function ManageTicketPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -35,7 +27,7 @@ function ManageTicketPage() {
   const [success, setSuccess] = useState("");
 
   const [technicianId, setTechnicianId] = useState("");
-  const [technicians, setTechnicians] = useState(MOCK_TECHNICIANS);
+  const [technicians, setTechnicians] = useState([]);
   const [technicianSearch, setTechnicianSearch] = useState("");
   const [assignLoading, setAssignLoading] = useState(false);
 
@@ -59,11 +51,15 @@ function ManageTicketPage() {
       setSuccess("");
 
       try {
-        const res = await getTicketById(id, authHeader);
-        setTicket(res.data);
-        setTechnicians(MOCK_TECHNICIANS);
-        setTechnicianId(res.data?.assignedTechnicianId ? String(res.data.assignedTechnicianId) : "");
-        setResolutionNotes(res.data?.resolutionNotes || "");
+        const [ticketRes, techRes] = await Promise.all([
+          getTicketById(id, authHeader),
+          getUsersByRole("TECHNICIAN", authHeader),
+        ]);
+
+        setTicket(ticketRes.data);
+        setTechnicians(techRes.data || []);
+        setTechnicianId(ticketRes.data?.assignedTechnicianId ? String(ticketRes.data.assignedTechnicianId) : "");
+        setResolutionNotes(ticketRes.data?.resolutionNotes || "");
       } catch (err) {
         setError(err?.response?.data?.message || "Failed to load ticket.");
       } finally {
