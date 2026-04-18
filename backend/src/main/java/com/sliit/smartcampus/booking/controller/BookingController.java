@@ -7,6 +7,7 @@ import com.sliit.smartcampus.booking.service.BookingService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -39,13 +40,32 @@ public class BookingController {
         return bookingService.getBookingsByUserId(userId);
     }
 
+    @GetMapping("/resource/{id}")
+    public List<BookingResponseDto> getBookingsByResourceId(@PathVariable Long id) {
+        return bookingService.getBookingsByResourceId(id);
+    }
+
+    @GetMapping("/resource/{id}/date/{bookingDate}")
+    public List<BookingResponseDto> getBookingsByResourceAndDate(
+            @PathVariable Long id,
+            @PathVariable LocalDate bookingDate
+    ) {
+        return bookingService.getBookingsByResourceAndDate(id, bookingDate);
+    }
+
     @PatchMapping("/{id}/approve")
-    public BookingResponseDto approveBooking(@PathVariable Long id, @Valid @RequestBody BookingDecisionDto dto) {
+    public BookingResponseDto approveBooking(
+            @PathVariable Long id,
+            @Valid @RequestBody BookingDecisionDto dto
+    ) {
         return bookingService.approveBooking(id, dto);
     }
 
     @PatchMapping("/{id}/reject")
-    public BookingResponseDto rejectBooking(@PathVariable Long id, @Valid @RequestBody BookingDecisionDto dto) {
+    public BookingResponseDto rejectBooking(
+            @PathVariable Long id,
+            @Valid @RequestBody BookingDecisionDto dto
+    ) {
         return bookingService.rejectBooking(id, dto);
     }
 

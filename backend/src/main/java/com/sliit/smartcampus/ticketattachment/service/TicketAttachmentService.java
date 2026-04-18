@@ -40,7 +40,7 @@ public class TicketAttachmentService {
 
         long existingCount = attachmentRepository.countByTicketId(ticketId);
         if (existingCount >= 3) {
-            throw new InvalidFileException("A ticket can only have up to 3 image attachments");
+            throw new InvalidFileException("A ticket can only have up to 3 attachments");
         }
 
         validateFile(file);
@@ -105,8 +105,18 @@ public class TicketAttachmentService {
         }
 
         String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new InvalidFileException("Only image files are allowed");
+        boolean isImage = contentType != null && contentType.startsWith("image/");
+        boolean isPdf = "application/pdf".equalsIgnoreCase(contentType);
+        boolean isCsv = "text/csv".equalsIgnoreCase(contentType)
+                || "application/csv".equalsIgnoreCase(contentType)
+                || "text/plain".equalsIgnoreCase(contentType);
+        boolean isExcel = "application/vnd.ms-excel".equalsIgnoreCase(contentType)
+                || "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet".equalsIgnoreCase(contentType);
+        boolean isWord = "application/msword".equalsIgnoreCase(contentType)
+            || "application/vnd.openxmlformats-officedocument.wordprocessingml.document".equalsIgnoreCase(contentType);
+
+        if (!isImage && !isPdf && !isCsv && !isExcel && !isWord) {
+            throw new InvalidFileException("Only image, PDF, CSV, Excel, or Word files are allowed");
         }
 
         long maxSize = 5 * 1024 * 1024; // 5MB

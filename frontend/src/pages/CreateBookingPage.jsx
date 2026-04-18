@@ -1,0 +1,474 @@
+import { useEffect, useMemo, useState } from "react";
+import axiosClient from "../api/axiosClient";
+import { useAuth } from "../auth/AuthContext";
+import PageShell from "../components/layout/PageShell";
+import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
+import SelectInput from "../components/ui/SelectInput";
+
+function CreateBookingPage() {
+  const { credentials, user, buildBasicAuthHeader } = useAuth();
+
+  const [resources, setResources] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+
+  const [form, setForm] = useState({
+    resourceId: "",
+    bookingDate: "",
+    startTime: "",
+    endTime: "",
+    purpose: "",
+    expectedAttendees: "",
+  });
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [conflict, setConflict] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const authHeader = useMemo(
+    () => buildBasicAuthHeader(credentials.email, credentials.password),
+    [credentials, buildBasicAuthHeader]
+  );
+
+  const generateTimeSlots = () => {
+    const slots = [];
+    for (let hour = 8; hour <= 18; hour++) {
+      slots.push(`${hour.toString().padStart(2, "0")}:00`);
+      if (hour !== 18) {
+        slots.push(`${hour.toString().padStart(2, "0")}:30`);
+      }
+    }
+    return slots;
+  };
+
+  const timeSlots = useMemo(() => generateTimeSlots(), []);
+
+  const normalizeTime = (time) => {
+    if (!time) return "";
+    return time.length === 5 ? `${time}:00` : time;
+  };
+
+  const fetchResources = async () => {
+    try {
+      const response = await axiosClient.get("/api/resources", {
+        headers: {
+          Authorization: authHeader,
+        },
+      });
+      setResources(response.data);
+    } catch (err) {
+      setError("Failed to load resources");
+    }
+  };
+
+  const fetchBookingsForResourceAndDate = async () => {
+    if (!form.resourceId || !form.bookingDate) {
+      setBookings([]);
+      return;
+    }
+
+    try {
+      setLoadingBookings(true);
+
+      const response = await axiosClient.get(
+        `/api/bookings/resource/${form.resourceId}/date/${form.bookingDate}`,
+        {
+          headers: {
+            Authorization: authHeader,
+          },
+        }
+      );
+
+      setBookings(response.data);
+    } catch (err) {
+      setBookings([]);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchResources();
+  }, []);
+
+  useEffect(() => {
+    fetchBookingsForResourceAndDate();
+  }, [form.resourceId, form.bookingDate]);
+
+  useEffect(() => {
+    if (!form.startTime || !form.endTime || bookings.length === 0) {
+      setConflict(false);
+      return;
+    }
+
+    const newStart = normalizeTime(form.startTime);
+    const newEnd = normalizeTime(form.endTime);
+
+    const hasConflict = bookings.some((item) => {
+      const bookingStart = normalizeTime(item.startTime);
+      const bookingEnd = normalizeTime(item.endTime);
+
+      return newStart < bookingEnd && newEnd > bookingStart;
+    });
+
+    setConflict(hasConflict);
+  }, [form.startTime, form.endTime, bookings]);
+
+  const isSlotBooked = (slot) => {
+    const normalizedSlot = normalizeTime(slot);
+
+    return bookings.some((item) => {
+      const bookingStart = normalizeTime(item.startTime);
+      const bookingEnd = normalizeTime(item.endTime);
+
+      return normalizedSlot >= bookingStart && normalizedSlot < bookingEnd;
+    });
+  };
+
+  const getStartTimeOptions = () => {
+    return timeSlots.map((slot) => ({
+      value: slot,
+      label: slot,
+      disabled: isSlotBooked(slot),
+      booked: isSlotBooked(slot),
+    }));
+  };
+
+  const getEndTimeOptions = () => {
+    if (!form.startTime) return [];
+
+    const normalizedStart = normalizeTime(form.startTime);
+
+    let conflictBoundary = null;
+
+    bookings.forEach((item) => {
+      const bookingStart = normalizeTime(item.startTime);
+
+      if (bookingStart > normalizedStart) {
+        if (!conflictBoundary || bookingStart < conflictBoundary) {
+          conflictBoundary = bookingStart;
+        }
+      }
+    });
+
+    return timeSlots
+      .filter((slot) => slot > form.startTime)
+      .map((slot) => {
+        const normalizedSlot = normalizeTime(slot);
+
+        const disabled =
+          conflictBoundary && normalizedSlot > conflictBoundary;
+
+        return {
+          value: slot,
+          label: slot,
+          disabled,
+          booked: isSlotBooked(slot),
+        };
+      });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (
+      !form.resourceId ||
+      !form.bookingDate ||
+      !form.startTime ||
+      !form.endTime ||
+      !form.purpose
+    ) {
+      setError("Please fill all required fields");
+      return;
+    }
+
+    if (conflict) {
+      setError("Selected time slot conflicts with an existing booking");
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      await axiosClient.post(
+        "/api/bookings",
+        {
+          userId: user.id,
+          resourceId: Number(form.resourceId),
+          bookingDate: form.bookingDate,
+          startTime: normalizeTime(form.startTime),
+          endTime: normalizeTime(form.endTime),
+          purpose: form.purpose,
+          expectedAttendees: form.expectedAttendees
+            ? Number(form.expectedAttendees)
+            : null,
+        },
+        {
+          headers: {
+            Authorization: authHeader,
+          },
+        }
+      );
+
+      setSuccess("Booking request submitted successfully");
+      setForm({
+        resourceId: "",
+        bookingDate: "",
+        startTime: "",
+        endTime: "",
+        purpose: "",
+        expectedAttendees: "",
+      });
+      setBookings([]);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Booking creation failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const resourceOptions = [
+    { value: "", label: "Select resource" },
+    ...resources.map((resource) => ({
+      value: resource.id,
+      label: `${resource.name} (${resource.type})`,
+    })),
+  ];
+
+  return (
+    <PageShell
+      title="Create Booking"
+      subtitle="Reserve a campus resource using an interactive booking interface."
+    >
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card>
+          <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">
+            <SelectInput
+              label="Resource"
+              name="resourceId"
+              value={form.resourceId}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  resourceId: e.target.value,
+                  startTime: "",
+                  endTime: "",
+                }))
+              }
+              options={resourceOptions}
+            />
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">
+                Booking Date
+              </label>
+              <input
+                type="date"
+                value={form.bookingDate}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    bookingDate: e.target.value,
+                    startTime: "",
+                    endTime: "",
+                  }))
+                }
+                className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-orange-400"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">
+                Start Time
+              </label>
+              <select
+                value={form.startTime}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    startTime: e.target.value,
+                    endTime: "",
+                  }))
+                }
+                className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-orange-400"
+              >
+                <option value="">Select start time</option>
+                {getStartTimeOptions().map((slot) => (
+                  <option
+                    key={slot.value}
+                    value={slot.value}
+                    disabled={slot.disabled}
+                  >
+                    {slot.booked ? `🔴 ${slot.label} (Booked)` : slot.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">
+                End Time
+              </label>
+              <select
+                value={form.endTime}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    endTime: e.target.value,
+                  }))
+                }
+                className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-orange-400"
+              >
+                <option value="">Select end time</option>
+                {getEndTimeOptions().map((slot) => (
+                  <option
+                    key={slot.value}
+                    value={slot.value}
+                    disabled={slot.disabled}
+                  >
+                    {slot.booked
+                      ? `🔴 ${slot.label} (Partly unavailable)`
+                      : slot.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {form.startTime && form.endTime && !conflict && (
+              <div className="md:col-span-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                ✅ Selected time slot is available
+              </div>
+            )}
+
+            {conflict && (
+              <div className="md:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                ❌ This time overlaps with an existing booking. Please choose another slot.
+              </div>
+            )}
+
+            <div className="md:col-span-2 space-y-2">
+              <label className="text-sm font-medium text-slate-300">
+                Purpose
+              </label>
+              <input
+                type="text"
+                value={form.purpose}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    purpose: e.target.value,
+                  }))
+                }
+                placeholder="Describe the purpose of this booking"
+                className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-orange-400"
+              />
+            </div>
+
+            <div className="md:col-span-2 space-y-2">
+              <label className="text-sm font-medium text-slate-300">
+                Expected Attendees
+              </label>
+              <input
+                type="number"
+                value={form.expectedAttendees}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    expectedAttendees: e.target.value,
+                  }))
+                }
+                placeholder="Enter expected number of attendees"
+                className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-orange-400"
+              />
+            </div>
+
+            {error && (
+              <div className="md:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="md:col-span-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                {success}
+              </div>
+            )}
+
+            <div className="md:col-span-2 flex justify-end">
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={submitting || conflict}
+              >
+                {submitting ? "Submitting..." : "Create Booking"}
+              </Button>
+            </div>
+          </form>
+        </Card>
+
+        <Card>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-100">
+                Booking Timeline
+              </h3>
+              <p className="mt-1 text-sm text-slate-400">
+                Booked slots for the selected resource and date.
+              </p>
+            </div>
+
+            {!form.resourceId || !form.bookingDate ? (
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-5 text-sm text-slate-400">
+                Select a resource and date to see the timeline.
+              </div>
+            ) : loadingBookings ? (
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 px-4 py-5 text-sm text-slate-400">
+                Loading bookings...
+              </div>
+            ) : bookings.length === 0 ? (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-5 text-sm text-emerald-300">
+                No bookings found for this date. All displayed time slots are available.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {bookings.map((item) => (
+                  <div
+                    key={item.id}
+                    className="relative rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4"
+                  >
+                    <div className="absolute left-0 top-0 h-full w-1 rounded-l-2xl bg-red-500"></div>
+
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-red-300">
+                        🔴 {item.startTime} - {item.endTime}
+                      </p>
+
+                      <span className="text-xs text-slate-400">
+                        {item.status}
+                      </span>
+                    </div>
+
+                    <p className="mt-2 text-sm text-slate-200">
+                      {item.purpose}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      {item.userName}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+    </PageShell>
+  );
+}
+
+export default CreateBookingPage;

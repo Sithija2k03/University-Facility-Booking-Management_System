@@ -50,6 +50,26 @@ export function AuthProvider({ children }) {
     });
   };
 
+  const updateAuthSession = ({ name, password }) => {
+    if (!credentials) return;
+
+    const updatedCredentials = {
+      ...credentials,
+      password: password && password.trim() ? password : credentials.password,
+    };
+
+    const updatedUser = user
+      ? {
+          ...user,
+          name: name && name.trim() ? name : user.name,
+        }
+      : user;
+
+    setCredentials(updatedCredentials);
+    setUser(updatedUser);
+    localStorage.setItem("authCredentials", JSON.stringify(updatedCredentials));
+  };
+
   const logout = () => {
     setUser(null);
     setCredentials(null);
@@ -85,6 +105,7 @@ export function AuthProvider({ children }) {
         login,
         register,
         logout,
+        updateAuthSession,
         buildBasicAuthHeader,
       }}
     >

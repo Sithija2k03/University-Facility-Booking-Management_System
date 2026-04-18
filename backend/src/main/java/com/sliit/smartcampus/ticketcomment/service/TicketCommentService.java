@@ -15,10 +15,12 @@ import com.sliit.smartcampus.ticketcomment.repository.TicketCommentRepository;
 import com.sliit.smartcampus.user.entity.User;
 import com.sliit.smartcampus.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class TicketCommentService {
 
     private final TicketCommentRepository commentRepository;
