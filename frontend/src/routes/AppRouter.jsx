@@ -6,6 +6,7 @@ import RegisterPage from "../pages/RegisterPage";
 import UserDashboard from "../pages/UserDashboard";
 import AdminDashboard from "../pages/AdminDashboard";
 import TechnicianDashboard from "../pages/TechnicianDashboard";
+import ProfilePage from "../pages/ProfilePage";
 import UnauthorizedPage from "../pages/UnauthorizedPage";
 import ResourceListPage from "../pages/ResourceListPage";
 import CreateResourcePage from "../pages/CreateResourcePage";
@@ -63,6 +64,15 @@ function AppRouter() {
         element={
           <ProtectedPage allowedRoles={["USER", "ADMIN", "TECHNICIAN"]}>
             <DashboardRouter />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/profile"
+        element={
+          <ProtectedPage allowedRoles={["USER", "ADMIN", "TECHNICIAN"]}>
+            <ProfilePage />
           </ProtectedPage>
         }
       />
