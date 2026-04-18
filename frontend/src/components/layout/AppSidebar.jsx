@@ -108,6 +108,7 @@ function AppSidebar() {
             >
               Manage Bookings
             </Link>
+
           </>
         )}
       </nav>

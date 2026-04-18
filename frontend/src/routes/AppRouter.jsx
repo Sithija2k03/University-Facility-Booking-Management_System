@@ -14,6 +14,11 @@ import EditResourcePage from "../pages/EditResourcePage";
 import CreateBookingPage from "../pages/CreateBookingPage";
 import MyBookingsPage from "../pages/MyBookingsPage";
 import AllBookingsPage from "../pages/AllBookingsPage";
+import CreateTicketPage from "../pages/CreateTicketPage";
+import MyTicketsPage from "../pages/MyTicketsPage";
+import TicketDetailPage from "../pages/TicketDetailPage";
+import AllTicketsPage from "../pages/AllTicketsPage";
+import ManageTicketPage from "../pages/ManageTicketPage";
 import { useAuth } from "../auth/AuthContext";
 import AppLayout from "../components/layout/AppLayout";
 
@@ -132,6 +137,53 @@ function AppRouter() {
         }
       />
 
+      {/* TICKETS */}
+      <Route
+        path="/tickets/create"
+        element={
+          <ProtectedPage allowedRoles={["USER", "ADMIN", "TECHNICIAN"]}>
+            <CreateTicketPage />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/tickets/my"
+        element={
+          <ProtectedPage allowedRoles={["USER", "ADMIN"]}>
+            <MyTicketsPage />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/tickets/:id"
+        element={
+          <ProtectedPage allowedRoles={["USER", "ADMIN", "TECHNICIAN"]}>
+            <TicketDetailPage />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/tickets/all"
+        element={
+          <ProtectedPage allowedRoles={["ADMIN", "TECHNICIAN"]}>
+            <AllTicketsPage />
+          </ProtectedPage>
+        }
+      />
+
+      <Route
+        path="/tickets/:id/manage"
+        element={
+          <ProtectedPage allowedRoles={["ADMIN", "TECHNICIAN"]}>
+            <ManageTicketPage />
+          </ProtectedPage>
+        }
+      />
+
+      {/* DEFAULT */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
