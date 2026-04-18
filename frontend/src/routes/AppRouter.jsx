@@ -22,6 +22,8 @@ import AllTicketsPage from "../pages/AllTicketsPage";
 import ManageTicketPage from "../pages/ManageTicketPage";
 import { useAuth } from "../auth/AuthContext";
 import AppLayout from "../components/layout/AppLayout";
+import LandingPage from "../pages/LandingPage";
+
 
 function DashboardRouter() {
   const { user } = useAuth();
@@ -43,6 +45,9 @@ function ProtectedPage({ children, allowedRoles }) {
 function AppRouter() {
   return (
     <Routes>
+      {/*Landing Page*/}
+      <Route path="/" element={<LandingPage />} />
+
       {/* AUTH */}
       <Route
         path="/login"
