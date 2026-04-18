@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../auth/AuthContext";
 import PageShell from "../components/layout/PageShell";
@@ -17,7 +15,7 @@ function CreateBookingPage() {
 
   const [form, setForm] = useState({
     resourceId: "",
-    bookingDate: null,
+    bookingDate: "",
     startTime: "",
     endTime: "",
     purpose: "",
@@ -30,8 +28,7 @@ function CreateBookingPage() {
   const [submitting, setSubmitting] = useState(false);
 
   const authHeader = useMemo(
-    () =>
-      buildBasicAuthHeader(credentials.email, credentials.password),
+    () => buildBasicAuthHeader(credentials.email, credentials.password),
     [credentials, buildBasicAuthHeader]
   );
 
@@ -48,67 +45,9 @@ function CreateBookingPage() {
 
   const timeSlots = useMemo(() => generateTimeSlots(), []);
 
-  const formatDate = (date) => {
-    return date.toISOString().split("T")[0];
-  };
-
   const normalizeTime = (time) => {
     if (!time) return "";
     return time.length === 5 ? `${time}:00` : time;
-  };
-
-  const isSlotBooked = (slot) => {
-    const normalizedSlot = normalizeTime(slot);
-
-    return bookings.some((booking) => {
-      const bookingStart = normalizeTime(booking.startTime);
-      const bookingEnd = normalizeTime(booking.endTime);
-
-      return normalizedSlot >= bookingStart && normalizedSlot < bookingEnd;
-    });
-  };
-
-  const getEndTimeOptions = () => {
-  if (!form.startTime) return [];
-
-  const normalizedStart = normalizeTime(form.startTime);
-
-  let conflictBoundary = null;
-
-  bookings.forEach((booking) => {
-    const bookingStart = normalizeTime(booking.startTime);
-
-    if (bookingStart > normalizedStart) {
-      if (!conflictBoundary || bookingStart < conflictBoundary) {
-        conflictBoundary = bookingStart;
-      }
-    }
-  });
-
-  return timeSlots
-    .filter((slot) => slot > form.startTime)
-    .map((slot) => {
-      const normalizedSlot = normalizeTime(slot);
-
-      const disabled =
-        conflictBoundary && normalizedSlot > conflictBoundary;
-
-      return {
-        value: slot,
-        label: slot,
-        disabled,
-        booked: isSlotBooked(slot),
-      };
-    });
-};
-
-  const getStartTimeOptions = () => {
-    return timeSlots.map((slot) => ({
-      value: slot,
-      label: slot,
-      disabled: isSlotBooked(slot),
-      booked: isSlotBooked(slot),
-    }));
   };
 
   const fetchResources = async () => {
@@ -132,10 +71,9 @@ function CreateBookingPage() {
 
     try {
       setLoadingBookings(true);
-      const formattedDate = formatDate(form.bookingDate);
 
       const response = await axiosClient.get(
-        `/api/bookings/resource/${form.resourceId}/date/${formattedDate}`,
+        `/api/bookings/resource/${form.resourceId}/date/${form.bookingDate}`,
         {
           headers: {
             Authorization: authHeader,
@@ -168,9 +106,9 @@ function CreateBookingPage() {
     const newStart = normalizeTime(form.startTime);
     const newEnd = normalizeTime(form.endTime);
 
-    const hasConflict = bookings.some((booking) => {
-      const bookingStart = normalizeTime(booking.startTime);
-      const bookingEnd = normalizeTime(booking.endTime);
+    const hasConflict = bookings.some((item) => {
+      const bookingStart = normalizeTime(item.startTime);
+      const bookingEnd = normalizeTime(item.endTime);
 
       return newStart < bookingEnd && newEnd > bookingStart;
     });
@@ -178,12 +116,72 @@ function CreateBookingPage() {
     setConflict(hasConflict);
   }, [form.startTime, form.endTime, bookings]);
 
+  const isSlotBooked = (slot) => {
+    const normalizedSlot = normalizeTime(slot);
+
+    return bookings.some((item) => {
+      const bookingStart = normalizeTime(item.startTime);
+      const bookingEnd = normalizeTime(item.endTime);
+
+      return normalizedSlot >= bookingStart && normalizedSlot < bookingEnd;
+    });
+  };
+
+  const getStartTimeOptions = () => {
+    return timeSlots.map((slot) => ({
+      value: slot,
+      label: slot,
+      disabled: isSlotBooked(slot),
+      booked: isSlotBooked(slot),
+    }));
+  };
+
+  const getEndTimeOptions = () => {
+    if (!form.startTime) return [];
+
+    const normalizedStart = normalizeTime(form.startTime);
+
+    let conflictBoundary = null;
+
+    bookings.forEach((item) => {
+      const bookingStart = normalizeTime(item.startTime);
+
+      if (bookingStart > normalizedStart) {
+        if (!conflictBoundary || bookingStart < conflictBoundary) {
+          conflictBoundary = bookingStart;
+        }
+      }
+    });
+
+    return timeSlots
+      .filter((slot) => slot > form.startTime)
+      .map((slot) => {
+        const normalizedSlot = normalizeTime(slot);
+
+        const disabled =
+          conflictBoundary && normalizedSlot > conflictBoundary;
+
+        return {
+          value: slot,
+          label: slot,
+          disabled,
+          booked: isSlotBooked(slot),
+        };
+      });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
 
-    if (!form.resourceId || !form.bookingDate || !form.startTime || !form.endTime || !form.purpose) {
+    if (
+      !form.resourceId ||
+      !form.bookingDate ||
+      !form.startTime ||
+      !form.endTime ||
+      !form.purpose
+    ) {
       setError("Please fill all required fields");
       return;
     }
@@ -201,7 +199,7 @@ function CreateBookingPage() {
         {
           userId: user.id,
           resourceId: Number(form.resourceId),
-          bookingDate: formatDate(form.bookingDate),
+          bookingDate: form.bookingDate,
           startTime: normalizeTime(form.startTime),
           endTime: normalizeTime(form.endTime),
           purpose: form.purpose,
@@ -219,7 +217,7 @@ function CreateBookingPage() {
       setSuccess("Booking request submitted successfully");
       setForm({
         resourceId: "",
-        bookingDate: null,
+        bookingDate: "",
         startTime: "",
         endTime: "",
         purpose: "",
@@ -264,26 +262,23 @@ function CreateBookingPage() {
               options={resourceOptions}
             />
 
-            
-
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300">
                 Booking Date
               </label>
-              <DatePicker
-                selected={form.bookingDate}
-                onChange={(date) =>
+              <input
+                type="date"
+                value={form.bookingDate}
+                min={new Date().toISOString().split("T")[0]}
+                onChange={(e) =>
                   setForm((prev) => ({
                     ...prev,
-                    bookingDate: date,
+                    bookingDate: e.target.value,
                     startTime: "",
                     endTime: "",
                   }))
                 }
-                minDate={new Date()}
-                dateFormat="yyyy-MM-dd"
                 className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-orange-400"
-                placeholderText="Select booking date"
               />
             </div>
 
@@ -308,7 +303,6 @@ function CreateBookingPage() {
                     key={slot.value}
                     value={slot.value}
                     disabled={slot.disabled}
-                    className={slot.booked ? "text-red-400" : ""}
                   >
                     {slot.booked ? `🔴 ${slot.label} (Booked)` : slot.label}
                   </option>
@@ -335,13 +329,27 @@ function CreateBookingPage() {
                   <option
                     key={slot.value}
                     value={slot.value}
-                    className={slot.booked ? "text-red-400" : ""}
+                    disabled={slot.disabled}
                   >
-                    {slot.booked ? `🔴 ${slot.label} (Partly unavailable)` : slot.label}
+                    {slot.booked
+                      ? `🔴 ${slot.label} (Partly unavailable)`
+                      : slot.label}
                   </option>
                 ))}
               </select>
             </div>
+
+            {form.startTime && form.endTime && !conflict && (
+              <div className="md:col-span-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+                ✅ Selected time slot is available
+              </div>
+            )}
+
+            {conflict && (
+              <div className="md:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                ❌ This time overlaps with an existing booking. Please choose another slot.
+              </div>
+            )}
 
             <div className="md:col-span-2 space-y-2">
               <label className="text-sm font-medium text-slate-300">
@@ -379,37 +387,6 @@ function CreateBookingPage() {
               />
             </div>
 
-            <div
-  key={booking.id}
-  className="relative rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4"
->
-  <div className="absolute left-0 top-0 h-full w-1 bg-red-500 rounded-l-2xl"></div>
-
-  <div className="flex items-center justify-between">
-    <p className="text-sm font-semibold text-red-300">
-      🔴 {booking.startTime} - {booking.endTime}
-    </p>
-
-    <span className="text-xs text-slate-400">
-      {booking.status}
-    </span>
-  </div>
-
-  <p className="mt-2 text-sm text-slate-200">
-    {booking.purpose}
-  </p>
-
-  <p className="mt-1 text-xs text-slate-400">
-    {booking.userName}
-  </p>
-</div>
-
-            {conflict && (
-              <div className="md:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                Selected time slot conflicts with an existing booking.
-              </div>
-            )}
-
             {error && (
               <div className="md:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
                 {error}
@@ -423,7 +400,11 @@ function CreateBookingPage() {
             )}
 
             <div className="md:col-span-2 flex justify-end">
-              <Button type="submit" variant="primary" disabled={submitting || conflict}>
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={submitting || conflict}
+              >
                 {submitting ? "Submitting..." : "Create Booking"}
               </Button>
             </div>
@@ -455,25 +436,29 @@ function CreateBookingPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {bookings.map((booking) => (
+                {bookings.map((item) => (
                   <div
-                    key={booking.id}
-                    className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4"
+                    key={item.id}
+                    className="relative rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4"
                   >
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium text-red-300">
-                        🔴 {booking.startTime} - {booking.endTime}
+                    <div className="absolute left-0 top-0 h-full w-1 rounded-l-2xl bg-red-500"></div>
+
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold text-red-300">
+                        🔴 {item.startTime} - {item.endTime}
                       </p>
-                      <span className="rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300">
-                        {booking.status}
+
+                      <span className="text-xs text-slate-400">
+                        {item.status}
                       </span>
                     </div>
 
                     <p className="mt-2 text-sm text-slate-200">
-                      {booking.purpose}
+                      {item.purpose}
                     </p>
+
                     <p className="mt-1 text-xs text-slate-400">
-                      Booked by {booking.userName}
+                      {item.userName}
                     </p>
                   </div>
                 ))}

@@ -40,8 +40,6 @@ function AppSidebar() {
 
       {/* NAV */}
       <nav className="space-y-2">
-
-        {/* COMMON */}
         <Link
           to="/dashboard"
           className={`${linkBase} ${
@@ -60,13 +58,12 @@ function AppSidebar() {
           Resources
         </Link>
 
-        {/* BOOKINGS SECTION */}
-        <p className="mt-6 px-2 text-xs uppercase text-slate-500">
-          Booking
-        </p>
-
-        {(user.role === "USER" || user.role === "ADMIN") && (
+        {user.role === "USER" && (
           <>
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">
+              Booking
+            </p>
+
             <Link
               to="/bookings/create"
               className={`${linkBase} ${
@@ -143,9 +140,7 @@ function AppSidebar() {
             <Link
               to="/resources/create"
               className={`${linkBase} ${
-                isActive("/resources/create")
-                  ? activeClass
-                  : inactiveClass
+                isActive("/resources/create") ? activeClass : inactiveClass
               }`}
             >
               Create Resource
