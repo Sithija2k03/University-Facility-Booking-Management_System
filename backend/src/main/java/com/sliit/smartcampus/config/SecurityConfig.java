@@ -61,6 +61,9 @@ public class SecurityConfig {
                         // notifications
                         .requestMatchers("/api/notifications/**").authenticated()
 
+                        // users
+                        .requestMatchers(HttpMethod.GET, "/api/users/**").hasAnyRole("ADMIN", "TECHNICIAN")
+
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults())

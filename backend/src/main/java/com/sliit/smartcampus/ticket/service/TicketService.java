@@ -12,12 +12,14 @@ import com.sliit.smartcampus.ticket.repository.TicketRepository;
 import com.sliit.smartcampus.user.entity.User;
 import com.sliit.smartcampus.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.sliit.smartcampus.auth.security.SecurityUtils;
 import com.sliit.smartcampus.common.exception.UnauthorizedAccessException;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class TicketService {
 
     private final TicketRepository ticketRepository;

@@ -1,14 +1,28 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
+import Button from "../components/ui/Button";
 
 const cards = [
-  { title: "Assigned Tickets", desc: "Monitor tickets assigned to you." },
-  { title: "Status Updates", desc: "Update ticket progress and resolution notes." },
+  {
+    title: "Assigned Tickets",
+    desc: "Monitor tickets assigned to you.",
+    actionLabel: "Open Assigned Tickets",
+    path: "/tickets/all",
+  },
+  {
+    title: "Status Updates",
+    desc: "Update ticket progress and resolution notes.",
+    actionLabel: "Go to Status Updates",
+    path: "/tickets/all",
+  },
   { title: "Resource Context", desc: "Inspect resource details linked to incidents." },
 ];
 
 function TechnicianDashboard() {
+  const navigate = useNavigate();
+
   return (
     <PageShell
       title="Technician Dashboard"
@@ -25,6 +39,11 @@ function TechnicianDashboard() {
             <Card className="h-full">
               <h3 className="text-lg font-semibold text-slate-100">{card.title}</h3>
               <p className="mt-2 text-sm leading-6 text-slate-400">{card.desc}</p>
+              {card.path && (
+                <Button className="mt-4" onClick={() => navigate(card.path)}>
+                  {card.actionLabel}
+                </Button>
+              )}
             </Card>
           </motion.div>
         ))}

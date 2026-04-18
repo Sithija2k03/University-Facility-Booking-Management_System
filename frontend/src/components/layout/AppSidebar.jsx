@@ -84,6 +84,53 @@ function AppSidebar() {
           </>
         )}
 
+        {/* TICKETS SECTION */}
+        <p className="mt-6 px-2 text-xs uppercase text-slate-500">
+          Tickets
+        </p>
+
+        <Link
+          to="/tickets/create"
+          className={`${linkBase} ${
+            isActive("/tickets/create") ? activeClass : inactiveClass
+          }`}
+        >
+          Create Ticket
+        </Link>
+
+        {(user.role === "USER" || user.role === "ADMIN") && (
+          <Link
+            to="/tickets/my"
+            className={`${linkBase} ${
+              isActive("/tickets/my") ? activeClass : inactiveClass
+            }`}
+          >
+            My Tickets
+          </Link>
+        )}
+
+        {(user.role === "ADMIN" || user.role === "TECHNICIAN") && (
+          <Link
+            to="/tickets/all"
+            className={`${linkBase} ${
+              isActive("/tickets/all") ? activeClass : inactiveClass
+            }`}
+          >
+            {user.role === "ADMIN" ? "View All Tickets" : "Assigned Tickets"}
+          </Link>
+        )}
+
+        {(user.role === "ADMIN" || user.role === "TECHNICIAN") && (
+          <Link
+            to="/tickets/all"
+            className={`${linkBase} ${
+              isActive("/tickets/all") ? activeClass : inactiveClass
+            }`}
+          >
+            Manage Tickets
+          </Link>
+        )}
+
         {user.role === "ADMIN" && (
           <>
             <p className="mt-6 px-2 text-xs uppercase text-slate-500">
@@ -107,6 +154,7 @@ function AppSidebar() {
             >
               Manage Bookings
             </Link>
+
           </>
         )}
       </nav>
