@@ -30,7 +30,11 @@ public class SecurityConfig {
                                 "/api/auth/login"
                         ).permitAll()
 
+                        // authenticated profile/current-user endpoints
                         .requestMatchers("/api/auth/me").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/users/me").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/me").authenticated()
 
                         // resources
                         .requestMatchers(HttpMethod.GET, "/api/resources/**").authenticated()
@@ -61,8 +65,9 @@ public class SecurityConfig {
                         // notifications
                         .requestMatchers("/api/notifications/**").authenticated()
 
-                        // users
-                        .requestMatchers(HttpMethod.GET, "/api/users/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                        // users - admin/technician access for broader user APIs
+                        .requestMatchers(HttpMethod.GET, "/api/users/role/**").hasAnyRole("ADMIN", "TECHNICIAN")
+                        .requestMatchers("/api/users/**").hasRole("ADMIN")
 
                         .anyRequest().authenticated()
                 )

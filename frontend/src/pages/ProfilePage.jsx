@@ -8,12 +8,12 @@ import Button from "../components/ui/Button";
 import TextInput from "../components/ui/TextInput";
 
 function ProfilePage() {
-  const { credentials, logout } = useAuth();
+  const { user, credentials, buildBasicAuthHeader, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(user || null);
   const [form, setForm] = useState({
-    name: "",
+    name: user?.name || "",
     password: "",
   });
   const [loading, setLoading] = useState(true);
@@ -22,13 +22,25 @@ function ProfilePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const authHeader = useMemo(
-    () => `Basic ${btoa(`${credentials.email}:${credentials.password}`)}`,
-    [credentials]
-  );
+  const authHeader = useMemo(() => {
+    if (!credentials) return "";
+    return buildBasicAuthHeader(credentials.email, credentials.password);
+  }, [credentials, buildBasicAuthHeader]);
+
+  const formatDateTime = (value) => {
+    if (!value) return "-";
+    try {
+      return new Date(value).toLocaleString();
+    } catch {
+      return value;
+    }
+  };
 
   const fetchProfile = async () => {
     try {
+      setLoading(true);
+      setError("");
+
       const response = await axiosClient.get("/api/users/me", {
         headers: {
           Authorization: authHeader,
@@ -48,8 +60,13 @@ function ProfilePage() {
   };
 
   useEffect(() => {
+    if (!credentials) {
+      setLoading(false);
+      return;
+    }
+
     fetchProfile();
-  }, []);
+  }, [credentials]);
 
   const handleChange = (e) => {
     setForm((prev) => ({
@@ -83,7 +100,8 @@ function ProfilePage() {
         ...prev,
         password: "",
       }));
-      fetchProfile();
+
+      await fetchProfile();
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to update profile");
     } finally {
@@ -99,6 +117,7 @@ function ProfilePage() {
 
     try {
       setDeleting(true);
+      setError("");
 
       await axiosClient.delete("/api/users/me", {
         headers: {
@@ -117,7 +136,10 @@ function ProfilePage() {
 
   if (loading) {
     return (
-      <PageShell title="Profile Settings" subtitle="Manage your account information.">
+      <PageShell
+        title="Profile Settings"
+        subtitle="Manage your account information."
+      >
         <Card>
           <p className="text-sm text-slate-400">Loading profile...</p>
         </Card>
@@ -143,12 +165,14 @@ function ProfilePage() {
             </div>
 
             <h3 className="mt-5 text-xl font-semibold text-slate-100">
-              {profile?.name}
+              {profile?.name || user?.name}
             </h3>
-            <p className="mt-1 text-sm text-slate-400">{profile?.email}</p>
+            <p className="mt-1 text-sm text-slate-400">
+              {profile?.email || user?.email}
+            </p>
 
             <span className="mt-4 inline-flex rounded-full border border-orange-500/30 bg-orange-500/10 px-4 py-1.5 text-xs font-medium text-orange-300">
-              {profile?.role}
+              {profile?.role || user?.role}
             </span>
           </div>
 
@@ -159,11 +183,11 @@ function ProfilePage() {
             </p>
             <p>
               <span className="text-slate-500">Created At:</span>{" "}
-              {profile?.createdAt}
+              {formatDateTime(profile?.createdAt)}
             </p>
             <p>
               <span className="text-slate-500">Updated At:</span>{" "}
-              {profile?.updatedAt}
+              {formatDateTime(profile?.updatedAt)}
             </p>
           </div>
         </Card>
