@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
+import logo from "../../assets/logo.png";
 
 const linkBase =
   "flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition";
@@ -20,22 +21,20 @@ function AppSidebar() {
     <aside className="hidden min-h-screen w-72 border-r border-slate-800 bg-slate-950/70 p-6 backdrop-blur lg:block">
       
       {/* HEADER */}
-      <div className="mb-8">
-        <p className="text-xs uppercase tracking-[0.25em] text-orange-400">
+      <div className="mb-10 flex flex-col items-center text-center">
+        
+        {/* TEXT */}
+        <p className="text-xs uppercase tracking-[0.3em] text-white">
           Smart Campus
         </p>
-        <h2 className="mt-2 text-2xl font-semibold text-slate-50">
-          Operations Hub
-        </h2>
-      </div>
 
-      {/* USER CARD */}
-      <div className="mb-8 rounded-3xl border border-slate-800 bg-slate-900/70 p-4">
-        <p className="text-sm font-medium text-slate-100">{user.name}</p>
-        <p className="mt-1 text-xs text-slate-400">{user.email}</p>
-        <span className="mt-3 inline-flex rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-medium text-orange-300">
-          {user.role}
-        </span>
+        {/* LOGO */}
+        <img
+          src={logo}
+          alt="Logo"
+          className="mt-1 h-32 w-32 object-contain"
+        />
+
       </div>
 
       {/* NAV */}
@@ -58,6 +57,7 @@ function AppSidebar() {
           Resources
         </Link>
 
+        {/* USER */}
         {user.role === "USER" && (
           <>
             <p className="mt-6 px-2 text-xs uppercase text-slate-500">
@@ -84,53 +84,7 @@ function AppSidebar() {
           </>
         )}
 
-        {/* TICKETS SECTION */}
-        <p className="mt-6 px-2 text-xs uppercase text-slate-500">
-          Tickets
-        </p>
-
-        <Link
-          to="/tickets/create"
-          className={`${linkBase} ${
-            isActive("/tickets/create") ? activeClass : inactiveClass
-          }`}
-        >
-          Create Ticket
-        </Link>
-
-        {(user.role === "USER" || user.role === "ADMIN") && (
-          <Link
-            to="/tickets/my"
-            className={`${linkBase} ${
-              isActive("/tickets/my") ? activeClass : inactiveClass
-            }`}
-          >
-            My Tickets
-          </Link>
-        )}
-
-        {(user.role === "ADMIN" || user.role === "TECHNICIAN") && (
-          <Link
-            to="/tickets/all"
-            className={`${linkBase} ${
-              isActive("/tickets/all") ? activeClass : inactiveClass
-            }`}
-          >
-            {user.role === "ADMIN" ? "View All Tickets" : "Assigned Tickets"}
-          </Link>
-        )}
-
-        {(user.role === "ADMIN" || user.role === "TECHNICIAN") && (
-          <Link
-            to="/tickets/all"
-            className={`${linkBase} ${
-              isActive("/tickets/all") ? activeClass : inactiveClass
-            }`}
-          >
-            Manage Tickets
-          </Link>
-        )}
-
+        {/* ADMIN */}
         {user.role === "ADMIN" && (
           <>
             <p className="mt-6 px-2 text-xs uppercase text-slate-500">

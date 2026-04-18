@@ -1,17 +1,11 @@
-import { useNavigate } from "react-router-dom";
+import NotificationBell from "./NotificationBell";
+import ProfileMenu from "./ProfileMenu";
 import { useAuth } from "../../auth/AuthContext";
-import Button from "../ui/Button";
 
 function TopBar() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
 
   if (!user) return null;
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
-  };
 
   return (
     <header className="sticky top-0 z-20 flex items-center justify-between rounded-3xl border border-slate-800 bg-slate-900/70 px-5 py-4 backdrop-blur">
@@ -25,12 +19,8 @@ function TopBar() {
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="hidden rounded-full border border-slate-700 px-3 py-1 text-xs text-slate-300 md:block">
-          {user.role}
-        </div>
-        <Button variant="secondary" onClick={handleLogout}>
-          Logout
-        </Button>
+        <NotificationBell />
+        <ProfileMenu />
       </div>
     </header>
   );
