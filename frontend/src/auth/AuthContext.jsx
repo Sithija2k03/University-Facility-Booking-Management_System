@@ -10,7 +10,7 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : null;
   });
   const [authMode, setAuthMode] = useState(() => {
-    return localStorage.getItem("authMode") || null; // "basic" or "oauth2"
+    return localStorage.getItem("authMode") || null; // "basic" | "oauth2"
   });
   const [loading, setLoading] = useState(true);
 
@@ -19,14 +19,11 @@ export function AuthProvider({ children }) {
   };
 
   const fetchMeBasic = async (email, password) => {
-    const authHeader = buildBasicAuthHeader(email, password);
-
     const response = await axiosClient.get("/api/auth/me", {
       headers: {
-        Authorization: authHeader,
+        Authorization: buildBasicAuthHeader(email, password),
       },
     });
-
     return response.data;
   };
 
@@ -36,13 +33,9 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
-    await axiosClient.post("/api/auth/login", {
-      email,
-      password,
-    });
+    await axiosClient.post("/api/auth/login", { email, password });
 
     const me = await fetchMeBasic(email, password);
-
     const authData = { email, password };
 
     setCredentials(authData);
@@ -54,11 +47,7 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (name, email, password) => {
-    await axiosClient.post("/api/auth/register", {
-      name,
-      email,
-      password,
-    });
+    await axiosClient.post("/api/auth/register", { name, email, password });
   };
 
   const completeGoogleLogin = async () => {
@@ -108,7 +97,7 @@ export function AuthProvider({ children }) {
         await axiosClient.post("/logout");
       }
     } catch {
-      // ignore logout cleanup errors
+      // ignore cleanup errors
     }
 
     setUser(null);
@@ -129,7 +118,7 @@ export function AuthProvider({ children }) {
           const me = await fetchMeOAuth2();
           setUser(me);
         }
-      } catch (error) {
+      } catch {
         setUser(null);
         setCredentials(null);
         setAuthMode(null);

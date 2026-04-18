@@ -6,6 +6,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
@@ -13,9 +14,14 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 public class SecurityConfig {
 
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final CustomOidcUserService customOidcUserService;
 
-    public SecurityConfig(OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) {
+    public SecurityConfig(
+            OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler,
+            CustomOidcUserService customOidcUserService
+    ) {
         this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
+        this.customOidcUserService = customOidcUserService;
     }
 
     @Bean
@@ -23,9 +29,10 @@ public class SecurityConfig {
         http
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session
+                        .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                )
                 .authorizeHttpRequests(auth -> auth
-
-                        // public
                         .requestMatchers(
                                 "/",
                                 "/error",
@@ -38,14 +45,12 @@ public class SecurityConfig {
                                 "/login/oauth2/**"
                         ).permitAll()
 
-                        // authenticated profile/current-user endpoints
                         .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/auth/oauth2/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/users/me").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/users/me").authenticated()
 
-                        // resources
                         .requestMatchers(HttpMethod.GET, "/api/resources/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/resources/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/resources/**").hasRole("ADMIN")
@@ -53,28 +58,22 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/resources/**").hasRole("ADMIN")
 
                         // bookings
-                        .requestMatchers(HttpMethod.POST, "/api/bookings/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/bookings/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/bookings/**").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/bookings/*/cancel").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/bookings/*/approve").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/bookings/*/reject").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/bookings/*/cancel").hasAnyRole("USER", "ADMIN")
 
                         // tickets
-                        .requestMatchers(HttpMethod.POST, "/api/tickets/**").hasAnyRole("USER", "ADMIN", "TECHNICIAN")
                         .requestMatchers(HttpMethod.GET, "/api/tickets/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/tickets/**").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/tickets/*/assign").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/tickets/*/status").hasAnyRole("ADMIN", "TECHNICIAN")
 
-                        // comments
                         .requestMatchers("/api/tickets/*/comments/**").authenticated()
-
-                        // attachments
                         .requestMatchers("/api/tickets/*/attachments/**").authenticated()
-
-                        // notifications
                         .requestMatchers("/api/notifications/**").authenticated()
 
-                        // users - admin/technician access for broader user APIs
                         .requestMatchers(HttpMethod.GET, "/api/users/role/**").hasAnyRole("ADMIN", "TECHNICIAN")
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
 
@@ -82,9 +81,20 @@ public class SecurityConfig {
                 )
                 .httpBasic(Customizer.withDefaults())
                 .exceptionHandling(exception ->
-                        exception.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                        exception.authenticationEntryPoint(
+                                new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)
+                        )
                 )
                 .oauth2Login(oauth2 -> oauth2
+                        .authorizationEndpoint(auth -> auth
+                                .baseUri("/oauth2/authorize")
+                        )
+                        .redirectionEndpoint(redirect -> redirect
+                                .baseUri("/login/oauth2/code/*")
+                        )
+                        .userInfoEndpoint(userInfo -> userInfo
+                                .oidcUserService(customOidcUserService)
+                        )
                         .successHandler(oAuth2LoginSuccessHandler)
                 )
                 .formLogin(form -> form.disable());

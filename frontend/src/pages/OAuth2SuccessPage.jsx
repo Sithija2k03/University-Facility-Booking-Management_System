@@ -14,8 +14,8 @@ function OAuth2SuccessPage() {
       try {
         await completeGoogleLogin();
         navigate("/dashboard", { replace: true });
-      } catch (err) {
-        setError("Google login completed, but user session could not be loaded.");
+      } catch {
+        setError("Google login completed, but the user session could not be loaded.");
       }
     };
 

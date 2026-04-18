@@ -3,13 +3,14 @@ package com.sliit.smartcampus.auth.controller;
 import com.sliit.smartcampus.auth.dto.AuthResponse;
 import com.sliit.smartcampus.auth.dto.LoginRequest;
 import com.sliit.smartcampus.auth.dto.RegisterRequest;
-import com.sliit.smartcampus.auth.security.CustomUserDetails;
 import com.sliit.smartcampus.auth.service.AuthService;
-import com.sliit.smartcampus.common.enums.RoleType;
 import com.sliit.smartcampus.user.entity.User;
 import com.sliit.smartcampus.user.repository.UserRepository;
 import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -34,42 +35,48 @@ public class AuthController {
         return authService.login(request);
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<AuthResponse> getCurrentUser(Authentication authentication) {
+        return resolveAuthenticatedUser(authentication);
+    }
+
     @GetMapping("/oauth2/me")
-    public AuthResponse oauth2Me(Authentication authentication) {
+    public ResponseEntity<AuthResponse> getCurrentOAuth2User(Authentication authentication) {
+        return resolveAuthenticatedUser(authentication);
+    }
+
+    private ResponseEntity<AuthResponse> resolveAuthenticatedUser(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new RuntimeException("User is not authenticated");
+            return ResponseEntity.status(401).build();
         }
+
+        String email;
 
         Object principal = authentication.getPrincipal();
 
-        if (principal instanceof org.springframework.security.oauth2.core.user.OAuth2User oauthUser) {
-            String email = oauthUser.getAttribute("email");
-
-            User user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            return AuthResponse.builder()
-                    .id(user.getId())
-                    .name(user.getName())
-                    .email(user.getEmail())
-                    .role(user.getRole())
-                    .message("OAuth2 authenticated user details")
-                    .build();
+        if (principal instanceof OidcUser oidcUser) {
+            email = oidcUser.getEmail();
+        } else if (principal instanceof UserDetails userDetails) {
+            email = userDetails.getUsername();
+        } else {
+            email = authentication.getName();
         }
 
-        throw new RuntimeException("Unsupported authenticated principal");
-    }
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.status(401).build();
+        }
 
-    @GetMapping("/me")
-    public AuthResponse me(Authentication authentication) {
-        CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return AuthResponse.builder()
-                .id(userDetails.getId())
-                .name(userDetails.getName())
-                .email(userDetails.getEmail())
-                .role(RoleType.valueOf(userDetails.getRole()))
-                .message("Authenticated user details")
+        AuthResponse response = AuthResponse.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .message("Authenticated")
                 .build();
+
+        return ResponseEntity.ok(response);
     }
 }
