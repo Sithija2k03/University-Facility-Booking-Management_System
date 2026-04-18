@@ -6,6 +6,8 @@ import com.sliit.smartcampus.auth.dto.RegisterRequest;
 import com.sliit.smartcampus.auth.security.CustomUserDetails;
 import com.sliit.smartcampus.auth.service.AuthService;
 import com.sliit.smartcampus.common.enums.RoleType;
+import com.sliit.smartcampus.user.entity.User;
+import com.sliit.smartcampus.user.repository.UserRepository;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -15,9 +17,11 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final UserRepository userRepository;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, UserRepository userRepository) {
         this.authService = authService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/register")
@@ -28,6 +32,32 @@ public class AuthController {
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
+    }
+
+    @GetMapping("/oauth2/me")
+    public AuthResponse oauth2Me(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("User is not authenticated");
+        }
+
+        Object principal = authentication.getPrincipal();
+
+        if (principal instanceof org.springframework.security.oauth2.core.user.OAuth2User oauthUser) {
+            String email = oauthUser.getAttribute("email");
+
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+
+            return AuthResponse.builder()
+                    .id(user.getId())
+                    .name(user.getName())
+                    .email(user.getEmail())
+                    .role(user.getRole())
+                    .message("OAuth2 authenticated user details")
+                    .build();
+        }
+
+        throw new RuntimeException("Unsupported authenticated principal");
     }
 
     @GetMapping("/me")

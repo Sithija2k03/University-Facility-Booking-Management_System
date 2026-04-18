@@ -19,25 +19,18 @@ function AppSidebar() {
 
   return (
     <aside className="hidden min-h-screen w-72 border-r border-slate-800 bg-slate-950/70 p-6 backdrop-blur lg:block">
-      
-      {/* HEADER */}
       <div className="mb-10 flex flex-col items-center text-center">
-        
-        {/* TEXT */}
         <p className="text-xs uppercase tracking-[0.3em] text-white">
           Smart Campus
         </p>
 
-        {/* LOGO */}
         <img
           src={logo}
           alt="Logo"
           className="mt-1 h-32 w-32 object-contain"
         />
-
       </div>
 
-      {/* NAV */}
       <nav className="space-y-2">
         <Link
           to="/dashboard"
@@ -57,7 +50,6 @@ function AppSidebar() {
           Resources
         </Link>
 
-        {/* USER */}
         {user.role === "USER" && (
           <>
             <p className="mt-6 px-2 text-xs uppercase text-slate-500">
@@ -81,10 +73,31 @@ function AppSidebar() {
             >
               My Bookings
             </Link>
+
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">
+              Tickets
+            </p>
+
+            <Link
+              to="/tickets/create"
+              className={`${linkBase} ${
+                isActive("/tickets/create") ? activeClass : inactiveClass
+              }`}
+            >
+              Create Ticket
+            </Link>
+
+            <Link
+              to="/tickets/my"
+              className={`${linkBase} ${
+                isActive("/tickets/my") ? activeClass : inactiveClass
+              }`}
+            >
+              My Tickets
+            </Link>
           </>
         )}
 
-        {/* ADMIN */}
         {user.role === "ADMIN" && (
           <>
             <p className="mt-6 px-2 text-xs uppercase text-slate-500">
@@ -109,6 +122,31 @@ function AppSidebar() {
               Manage Bookings
             </Link>
 
+            <Link
+              to="/tickets/manage"
+              className={`${linkBase} ${
+                isActive("/tickets/manage") ? activeClass : inactiveClass
+              }`}
+            >
+              Manage Tickets
+            </Link>
+          </>
+        )}
+
+        {user.role === "TECHNICIAN" && (
+          <>
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">
+              Tickets
+            </p>
+
+            <Link
+              to="/tickets/manage"
+              className={`${linkBase} ${
+                isActive("/tickets/manage") ? activeClass : inactiveClass
+              }`}
+            >
+              Manage Tickets
+            </Link>
           </>
         )}
       </nav>

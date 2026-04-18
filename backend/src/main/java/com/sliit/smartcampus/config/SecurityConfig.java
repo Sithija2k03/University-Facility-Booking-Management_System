@@ -12,6 +12,12 @@ import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 @Configuration
 public class SecurityConfig {
 
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+
+    public SecurityConfig(OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) {
+        this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
+    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -27,11 +33,14 @@ public class SecurityConfig {
                                 "/uploads/**",
                                 "/api/test",
                                 "/api/auth/register",
-                                "/api/auth/login"
+                                "/api/auth/login",
+                                "/oauth2/**",
+                                "/login/oauth2/**"
                         ).permitAll()
 
                         // authenticated profile/current-user endpoints
                         .requestMatchers("/api/auth/me").authenticated()
+                        .requestMatchers("/api/auth/oauth2/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/users/me").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/users/me").authenticated()
@@ -75,8 +84,10 @@ public class SecurityConfig {
                 .exceptionHandling(exception ->
                         exception.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
-                .formLogin(form -> form.disable())
-                .oauth2Login(oauth2 -> oauth2.disable());
+                .oauth2Login(oauth2 -> oauth2
+                        .successHandler(oAuth2LoginSuccessHandler)
+                )
+                .formLogin(form -> form.disable());
 
         return http.build();
     }

@@ -42,9 +42,9 @@ function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    alert("Google login will be integrated later.");
-  };
+const handleGoogleLogin = () => {
+  window.location.href = "http://localhost:8080/oauth2/authorization/google";
+};
 
   return (
     <AuthLayout

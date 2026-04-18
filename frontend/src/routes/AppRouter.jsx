@@ -3,6 +3,7 @@ import ProtectedRoute from "../auth/ProtectedRoute";
 import GuestRoute from "../auth/GuestRoute";
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
+import OAuth2SuccessPage from "../pages/OAuth2SuccessPage";
 import UserDashboard from "../pages/UserDashboard";
 import AdminDashboard from "../pages/AdminDashboard";
 import TechnicianDashboard from "../pages/TechnicianDashboard";
@@ -62,6 +63,8 @@ function AppRouter() {
       />
 
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
+
+      <Route path="/oauth2/success" element={<OAuth2SuccessPage />} />
 
       {/* DASHBOARD */}
       <Route
