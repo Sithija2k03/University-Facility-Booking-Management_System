@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../auth/AuthContext";
 import PageShell from "../components/layout/PageShell";
@@ -7,7 +9,7 @@ import Button from "../components/ui/Button";
 import SelectInput from "../components/ui/SelectInput";
 
 function CreateBookingPage() {
-  const { credentials, user, buildBasicAuthHeader } = useAuth();
+  const { credentials, authMode, user, buildBasicAuthHeader } = useAuth();
 
   const [resources, setResources] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -15,7 +17,7 @@ function CreateBookingPage() {
 
   const [form, setForm] = useState({
     resourceId: "",
-    bookingDate: "",
+    bookingDate: null,
     startTime: "",
     endTime: "",
     purpose: "",
@@ -27,10 +29,20 @@ function CreateBookingPage() {
   const [conflict, setConflict] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const authHeader = useMemo(
-    () => buildBasicAuthHeader(credentials.email, credentials.password),
-    [credentials, buildBasicAuthHeader]
-  );
+  const requestConfig = useMemo(() => {
+    if (authMode === "basic" && credentials) {
+      return {
+        headers: {
+          Authorization: buildBasicAuthHeader(
+            credentials.email,
+            credentials.password
+          ),
+        },
+      };
+    }
+
+    return {};
+  }, [authMode, credentials, buildBasicAuthHeader]);
 
   const generateTimeSlots = () => {
     const slots = [];
@@ -45,83 +57,21 @@ function CreateBookingPage() {
 
   const timeSlots = useMemo(() => generateTimeSlots(), []);
 
+  const formatDate = (date) => {
+    return date.toISOString().split("T")[0];
+  };
+
   const normalizeTime = (time) => {
     if (!time) return "";
     return time.length === 5 ? `${time}:00` : time;
   };
 
-  const fetchResources = async () => {
-    try {
-      const response = await axiosClient.get("/api/resources", {
-        headers: {
-          Authorization: authHeader,
-        },
-      });
-      setResources(response.data);
-    } catch (err) {
-      setError("Failed to load resources");
-    }
-  };
-
-  const fetchBookingsForResourceAndDate = async () => {
-    if (!form.resourceId || !form.bookingDate) {
-      setBookings([]);
-      return;
-    }
-
-    try {
-      setLoadingBookings(true);
-
-      const response = await axiosClient.get(
-        `/api/bookings/resource/${form.resourceId}/date/${form.bookingDate}`,
-        {
-          headers: {
-            Authorization: authHeader,
-          },
-        }
-      );
-
-      setBookings(response.data);
-    } catch (err) {
-      setBookings([]);
-    } finally {
-      setLoadingBookings(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchResources();
-  }, []);
-
-  useEffect(() => {
-    fetchBookingsForResourceAndDate();
-  }, [form.resourceId, form.bookingDate]);
-
-  useEffect(() => {
-    if (!form.startTime || !form.endTime || bookings.length === 0) {
-      setConflict(false);
-      return;
-    }
-
-    const newStart = normalizeTime(form.startTime);
-    const newEnd = normalizeTime(form.endTime);
-
-    const hasConflict = bookings.some((item) => {
-      const bookingStart = normalizeTime(item.startTime);
-      const bookingEnd = normalizeTime(item.endTime);
-
-      return newStart < bookingEnd && newEnd > bookingStart;
-    });
-
-    setConflict(hasConflict);
-  }, [form.startTime, form.endTime, bookings]);
-
   const isSlotBooked = (slot) => {
     const normalizedSlot = normalizeTime(slot);
 
-    return bookings.some((item) => {
-      const bookingStart = normalizeTime(item.startTime);
-      const bookingEnd = normalizeTime(item.endTime);
+    return bookings.some((booking) => {
+      const bookingStart = normalizeTime(booking.startTime);
+      const bookingEnd = normalizeTime(booking.endTime);
 
       return normalizedSlot >= bookingStart && normalizedSlot < bookingEnd;
     });
@@ -140,11 +90,10 @@ function CreateBookingPage() {
     if (!form.startTime) return [];
 
     const normalizedStart = normalizeTime(form.startTime);
-
     let conflictBoundary = null;
 
-    bookings.forEach((item) => {
-      const bookingStart = normalizeTime(item.startTime);
+    bookings.forEach((booking) => {
+      const bookingStart = normalizeTime(booking.startTime);
 
       if (bookingStart > normalizedStart) {
         if (!conflictBoundary || bookingStart < conflictBoundary) {
@@ -170,18 +119,75 @@ function CreateBookingPage() {
       });
   };
 
+  const fetchResources = async () => {
+    try {
+      const response = await axiosClient.get("/api/resources", requestConfig);
+      setResources(response.data);
+    } catch (err) {
+      setError("Failed to load resources");
+    }
+  };
+
+  const fetchBookingsForResourceAndDate = async () => {
+    if (!form.resourceId || !form.bookingDate) {
+      setBookings([]);
+      return;
+    }
+
+    try {
+      setLoadingBookings(true);
+      const formattedDate = formatDate(form.bookingDate);
+
+      const response = await axiosClient.get(
+        `/api/bookings/resource/${form.resourceId}/date/${formattedDate}`,
+        requestConfig
+      );
+
+      setBookings(response.data);
+    } catch (err) {
+      setBookings([]);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchResources();
+    }
+  }, [user, requestConfig]);
+
+  useEffect(() => {
+    if (user) {
+      fetchBookingsForResourceAndDate();
+    }
+  }, [form.resourceId, form.bookingDate, user, requestConfig]);
+
+  useEffect(() => {
+    if (!form.startTime || !form.endTime || bookings.length === 0) {
+      setConflict(false);
+      return;
+    }
+
+    const newStart = normalizeTime(form.startTime);
+    const newEnd = normalizeTime(form.endTime);
+
+    const hasConflict = bookings.some((booking) => {
+      const bookingStart = normalizeTime(booking.startTime);
+      const bookingEnd = normalizeTime(booking.endTime);
+
+      return newStart < bookingEnd && newEnd > bookingStart;
+    });
+
+    setConflict(hasConflict);
+  }, [form.startTime, form.endTime, bookings]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
 
-    if (
-      !form.resourceId ||
-      !form.bookingDate ||
-      !form.startTime ||
-      !form.endTime ||
-      !form.purpose
-    ) {
+    if (!form.resourceId || !form.bookingDate || !form.startTime || !form.endTime || !form.purpose) {
       setError("Please fill all required fields");
       return;
     }
@@ -199,7 +205,7 @@ function CreateBookingPage() {
         {
           userId: user.id,
           resourceId: Number(form.resourceId),
-          bookingDate: form.bookingDate,
+          bookingDate: formatDate(form.bookingDate),
           startTime: normalizeTime(form.startTime),
           endTime: normalizeTime(form.endTime),
           purpose: form.purpose,
@@ -207,17 +213,13 @@ function CreateBookingPage() {
             ? Number(form.expectedAttendees)
             : null,
         },
-        {
-          headers: {
-            Authorization: authHeader,
-          },
-        }
+        requestConfig
       );
 
       setSuccess("Booking request submitted successfully");
       setForm({
         resourceId: "",
-        bookingDate: "",
+        bookingDate: null,
         startTime: "",
         endTime: "",
         purpose: "",
@@ -266,19 +268,20 @@ function CreateBookingPage() {
               <label className="text-sm font-medium text-slate-300">
                 Booking Date
               </label>
-              <input
-                type="date"
-                value={form.bookingDate}
-                min={new Date().toISOString().split("T")[0]}
-                onChange={(e) =>
+              <DatePicker
+                selected={form.bookingDate}
+                onChange={(date) =>
                   setForm((prev) => ({
                     ...prev,
-                    bookingDate: e.target.value,
+                    bookingDate: date,
                     startTime: "",
                     endTime: "",
                   }))
                 }
+                minDate={new Date()}
+                dateFormat="yyyy-MM-dd"
                 className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-orange-400"
+                placeholderText="Select booking date"
               />
             </div>
 
@@ -331,9 +334,7 @@ function CreateBookingPage() {
                     value={slot.value}
                     disabled={slot.disabled}
                   >
-                    {slot.booked
-                      ? `🔴 ${slot.label} (Partly unavailable)`
-                      : slot.label}
+                    {slot.booked ? `🔴 ${slot.label} (Partly unavailable)` : slot.label}
                   </option>
                 ))}
               </select>
@@ -342,12 +343,6 @@ function CreateBookingPage() {
             {form.startTime && form.endTime && !conflict && (
               <div className="md:col-span-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
                 ✅ Selected time slot is available
-              </div>
-            )}
-
-            {conflict && (
-              <div className="md:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                ❌ This time overlaps with an existing booking. Please choose another slot.
               </div>
             )}
 
@@ -387,6 +382,12 @@ function CreateBookingPage() {
               />
             </div>
 
+            {conflict && (
+              <div className="md:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                ❌ This time overlaps with an existing booking. Please choose another slot.
+              </div>
+            )}
+
             {error && (
               <div className="md:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
                 {error}
@@ -400,11 +401,7 @@ function CreateBookingPage() {
             )}
 
             <div className="md:col-span-2 flex justify-end">
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={submitting || conflict}
-              >
+              <Button type="submit" variant="primary" disabled={submitting || conflict}>
                 {submitting ? "Submitting..." : "Create Booking"}
               </Button>
             </div>
@@ -436,29 +433,29 @@ function CreateBookingPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {bookings.map((item) => (
+                {bookings.map((booking) => (
                   <div
-                    key={item.id}
+                    key={booking.id}
                     className="relative rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4"
                   >
                     <div className="absolute left-0 top-0 h-full w-1 rounded-l-2xl bg-red-500"></div>
 
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-semibold text-red-300">
-                        🔴 {item.startTime} - {item.endTime}
+                        🔴 {booking.startTime} - {booking.endTime}
                       </p>
 
                       <span className="text-xs text-slate-400">
-                        {item.status}
+                        {booking.status}
                       </span>
                     </div>
 
                     <p className="mt-2 text-sm text-slate-200">
-                      {item.purpose}
+                      {booking.purpose}
                     </p>
 
                     <p className="mt-1 text-xs text-slate-400">
-                      {item.userName}
+                      {booking.userName}
                     </p>
                   </div>
                 ))}
