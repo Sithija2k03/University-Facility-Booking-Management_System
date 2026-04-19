@@ -32,6 +32,9 @@ export const assignTechnician = (ticketId, technicianId, authConfig) =>
 export const updateTicketStatus = (ticketId, data, authConfig) =>
   axiosClient.patch(`/api/tickets/${ticketId}/status`, data, authConfig);
 
+export const deleteTicket = (ticketId, authConfig) =>
+  axiosClient.delete(`/api/tickets/${ticketId}`, authConfig);
+
 // ─── ATTACHMENTS ────────────────────────────────────────────────────────────
 
 export const uploadAttachment = (ticketId, file, authConfig) => {

@@ -10,6 +10,20 @@ import Button from "../components/ui/Button";
 import StatusBadge from "../components/ui/StatusBadge";
 import PriorityBadge from "../components/ui/PriorityBadge";
 
+const formatTicketAge = (createdAt) => {
+  const created = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now.getTime() - created.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes} min${diffMinutes === 1 ? "" : "s"} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+  return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+};
+
 function MyTicketsPage() {
   const { credentials, buildBasicAuthHeader } = useAuth();
   const navigate = useNavigate();
@@ -94,11 +108,16 @@ function MyTicketsPage() {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-3">
-                  <p className="text-xs text-slate-500">
-                    {new Date(ticket.createdAt).toLocaleDateString("en-GB", {
-                      day: "numeric", month: "short", year: "numeric",
-                    })}
-                  </p>
+                  <div className="text-right">
+                    <p className="text-xs text-slate-500">
+                      Created: {new Date(ticket.createdAt).toLocaleDateString("en-GB", {
+                        day: "numeric", month: "short", year: "numeric",
+                      })}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      Age: {formatTicketAge(ticket.createdAt)}
+                    </p>
+                  </div>
                   <Button variant="secondary" onClick={() => navigate(`/tickets/${ticket.id}`)}>
                     View Details
                   </Button>

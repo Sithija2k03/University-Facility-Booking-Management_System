@@ -18,6 +18,12 @@ const taskCards = [
     path: "/tickets/manage",
   },
   {
+    title: "My Tickets",
+    desc: "Review tickets you have reported or tracked for your own follow-up.",
+    actionLabel: "Open My Tickets",
+    path: "/tickets/my",
+  },
+  {
     title: "Status Updates",
     desc: "Update progress, add technician notes, and move tickets through their lifecycle.",
     actionLabel: "Update Status",
@@ -85,6 +91,9 @@ function TechnicianDashboard() {
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button variant="primary" onClick={() => navigate("/tickets/manage")}>
                     Open Assigned Tickets
+                  </Button>
+                  <Button variant="secondary" onClick={() => navigate("/tickets/my")}>
+                    My Tickets
                   </Button>
                   <Button variant="secondary" onClick={() => navigate("/resources")}>
                     View Resources

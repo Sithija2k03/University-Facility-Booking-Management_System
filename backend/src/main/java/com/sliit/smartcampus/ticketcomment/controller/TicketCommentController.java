@@ -40,7 +40,7 @@ public class TicketCommentController {
             @Valid @RequestBody TicketCommentUpdateDto dto
     ) {
         Long requesterId = SecurityUtils.getCurrentUserId();
-        return commentService.updateComment(commentId, requesterId, dto);
+        return commentService.updateComment(ticketId, commentId, requesterId, dto);
     }
 
     @DeleteMapping("/{commentId}")
@@ -49,7 +49,7 @@ public class TicketCommentController {
             @PathVariable Long commentId
     ) {
         Long requesterId = SecurityUtils.getCurrentUserId();
-        commentService.deleteComment(commentId, requesterId);
+        commentService.deleteComment(ticketId, commentId, requesterId);
         return "Comment deleted successfully";
     }
 }
