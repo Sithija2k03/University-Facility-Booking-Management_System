@@ -57,4 +57,10 @@ public class TicketController {
     public TicketResponseDto updateStatus(@PathVariable Long id, @Valid @RequestBody TicketStatusUpdateDto dto) {
         return ticketService.updateStatus(id, dto);
     }
+
+    @DeleteMapping("/{id}")
+    public String deleteTicket(@PathVariable Long id) {
+        ticketService.deleteTicket(id);
+        return "Ticket deleted successfully";
+    }
 }

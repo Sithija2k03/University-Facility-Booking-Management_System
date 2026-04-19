@@ -27,6 +27,8 @@ const PRIORITIES = [
   { value: "CRITICAL", label: "Critical" },
 ];
 
+const CONTACT_REGEX = /^(?:[\w.%+-]+@[\w.-]+\.[A-Za-z]{2,}|\+?[0-9]{7,15})$/;
+
 function CreateTicketPage() {
   const { credentials, buildBasicAuthHeader } = useAuth();
   const navigate = useNavigate();
@@ -54,6 +56,9 @@ function CreateTicketPage() {
     if (!form.description.trim()) errs.description = "Description is required.";
     if (!form.preferredContact.trim())
       errs.preferredContact = "Preferred contact is required.";
+    else if (!CONTACT_REGEX.test(form.preferredContact.trim())) {
+      errs.preferredContact = "Preferred contact must be a valid email address or phone number.";
+    }
     return errs;
   };
 
@@ -148,7 +153,7 @@ function CreateTicketPage() {
             name="preferredContact"
             value={form.preferredContact}
             onChange={handleChange}
-            placeholder="e.g. your phone number or email"
+            placeholder="e.g. email@example.com or +94771234567"
             error={errors.preferredContact}
           />
 

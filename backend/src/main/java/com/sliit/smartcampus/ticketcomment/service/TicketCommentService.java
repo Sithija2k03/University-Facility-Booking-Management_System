@@ -89,9 +89,13 @@ public class TicketCommentService {
                 .toList();
     }
 
-    public TicketCommentResponseDto updateComment(Long commentId, Long requesterUserId, TicketCommentUpdateDto dto) {
+        public TicketCommentResponseDto updateComment(Long ticketId, Long commentId, Long requesterUserId, TicketCommentUpdateDto dto) {
         TicketComment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new TicketCommentNotFoundException("Comment not found with id: " + commentId));
+
+                if (!comment.getTicket().getId().equals(ticketId)) {
+                        throw new IllegalArgumentException("Comment does not belong to the specified ticket");
+                }
 
         User requester = userRepository.findById(requesterUserId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + requesterUserId));
@@ -109,9 +113,13 @@ public class TicketCommentService {
         return mapToResponse(updated);
     }
 
-    public void deleteComment(Long commentId, Long requesterUserId) {
+        public void deleteComment(Long ticketId, Long commentId, Long requesterUserId) {
         TicketComment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new TicketCommentNotFoundException("Comment not found with id: " + commentId));
+
+                if (!comment.getTicket().getId().equals(ticketId)) {
+                        throw new IllegalArgumentException("Comment does not belong to the specified ticket");
+                }
 
         User requester = userRepository.findById(requesterUserId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + requesterUserId));

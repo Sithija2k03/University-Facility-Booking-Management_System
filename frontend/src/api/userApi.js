@@ -1,6 +1,4 @@
 import axiosClient from "./axiosClient";
 
-export const getUsersByRole = (role, authHeader) =>
-  axiosClient.get(`/api/users/role/${role}`, {
-    headers: { Authorization: authHeader },
-  });
+export const getUsersByRole = (role, authConfig) =>
+  axiosClient.get(`/api/users/role/${role}`, authConfig);

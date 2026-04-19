@@ -11,6 +11,7 @@ import {
   getAttachments,
   uploadAttachment,
   deleteAttachment,
+  deleteTicket,
 } from "../api/ticketApi";
 import { getAuthConfig } from "../api/authHelper";
 import PageShell from "../components/layout/PageShell";
@@ -18,6 +19,24 @@ import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import StatusBadge from "../components/ui/StatusBadge";
 import PriorityBadge from "../components/ui/PriorityBadge";
+
+const ATTACHMENT_ACCEPT = "image/*";
+// Previous formats kept for reference:
+// const ATTACHMENT_ACCEPT = "image/*,application/pdf,.csv,.xls,.xlsx,.doc,.docx";
+
+const formatTicketAge = (createdAt) => {
+  const created = new Date(createdAt);
+  const now = new Date();
+  const diffMs = now.getTime() - created.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes} min${diffMinutes === 1 ? "" : "s"} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours === 1 ? "" : "s"} ago`;
+  return `${diffDays} day${diffDays === 1 ? "" : "s"} ago`;
+};
 
 function TicketDetailPage() {
   const { id } = useParams();
@@ -35,6 +54,7 @@ function TicketDetailPage() {
   const [editText, setEditText]             = useState("");
   const [uploading, setUploading]           = useState(false);
   const [attachError, setAttachError]       = useState("");
+  const [deletingTicket, setDeletingTicket] = useState(false);
 
   const authConfig = getAuthConfig(credentials, buildBasicAuthHeader);
 
@@ -98,6 +118,13 @@ function TicketDetailPage() {
     const file = e.target.files[0];
     if (!file) return;
     setAttachError("");
+
+    if (!file.type || !file.type.startsWith("image/")) {
+      setAttachError("Only image files are allowed (jpg, jpeg, png, gif, webp, etc.).");
+      e.target.value = "";
+      return;
+    }
+
     if (attachments.length >= 3) {
       setAttachError("Maximum 3 attachments allowed.");
       return;
@@ -154,6 +181,22 @@ function TicketDetailPage() {
     }
   };
 
+  const handleDeleteTicket = async () => {
+    if (!window.confirm("Delete this ticket? This will also remove related comments and attachments.")) {
+      return;
+    }
+
+    setDeletingTicket(true);
+    try {
+      await deleteTicket(id, authConfig);
+      navigate("/tickets/all");
+    } catch (err) {
+      alert(err?.response?.data?.message || "Failed to delete ticket.");
+    } finally {
+      setDeletingTicket(false);
+    }
+  };
+
   if (loading) return <p className="p-8 text-slate-400 animate-pulse">Loading ticket…</p>;
   if (error)   return <p className="p-8 text-red-400">{error}</p>;
   if (!ticket) return null;
@@ -172,6 +215,15 @@ function TicketDetailPage() {
           {canManage && (
             <Button onClick={() => navigate(`/tickets/${id}/manage`)}>
               Manage Ticket
+            </Button>
+          )}
+          {isAdmin && (
+            <Button
+              variant="ghost"
+              onClick={handleDeleteTicket}
+              disabled={deletingTicket}
+            >
+              {deletingTicket ? "Deleting..." : "Delete Ticket"}
             </Button>
           )}
           <Button variant="ghost" onClick={() => navigate(-1)}>← Back</Button>
@@ -193,6 +245,7 @@ function TicketDetailPage() {
             <Info label="Location"     value={ticket.locationText} />
             <Info label="Contact"      value={ticket.preferredContact} />
             <Info label="Submitted"    value={new Date(ticket.createdAt).toLocaleString("en-GB")} />
+            <Info label="Age"          value={formatTicketAge(ticket.createdAt)} />
             {ticket.assignedTechnicianName && (
               <Info label="Technician" value={ticket.assignedTechnicianName} highlight />
             )}
@@ -213,7 +266,7 @@ function TicketDetailPage() {
               {uploading ? "Uploading..." : "+ Upload"}
               <input
                 type="file"
-                accept="image/*,application/pdf,.csv,.xls,.xlsx,.doc,.docx"
+                accept={ATTACHMENT_ACCEPT}
                 className="hidden"
                 onChange={handleUpload}
                 disabled={uploading}
