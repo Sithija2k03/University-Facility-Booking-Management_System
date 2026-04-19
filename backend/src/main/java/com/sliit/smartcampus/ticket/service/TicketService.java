@@ -9,6 +9,9 @@ import com.sliit.smartcampus.resource.repository.ResourceRepository;
 import com.sliit.smartcampus.ticket.dto.*;
 import com.sliit.smartcampus.ticket.entity.Ticket;
 import com.sliit.smartcampus.ticket.repository.TicketRepository;
+import com.sliit.smartcampus.ticketattachment.entity.TicketAttachment;
+import com.sliit.smartcampus.ticketattachment.repository.TicketAttachmentRepository;
+import com.sliit.smartcampus.ticketcomment.repository.TicketCommentRepository;
 import com.sliit.smartcampus.user.entity.User;
 import com.sliit.smartcampus.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
@@ -16,6 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import com.sliit.smartcampus.auth.security.SecurityUtils;
 import com.sliit.smartcampus.common.exception.UnauthorizedAccessException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @Service
@@ -26,17 +33,23 @@ public class TicketService {
     private final UserRepository userRepository;
     private final ResourceRepository resourceRepository;
     private final NotificationService notificationService;
+    private final TicketAttachmentRepository ticketAttachmentRepository;
+    private final TicketCommentRepository ticketCommentRepository;
 
     public TicketService(
             TicketRepository ticketRepository,
             UserRepository userRepository,
             ResourceRepository resourceRepository,
-            NotificationService notificationService
+            NotificationService notificationService,
+            TicketAttachmentRepository ticketAttachmentRepository,
+            TicketCommentRepository ticketCommentRepository
     ) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.resourceRepository = resourceRepository;
         this.notificationService = notificationService;
+        this.ticketAttachmentRepository = ticketAttachmentRepository;
+        this.ticketCommentRepository = ticketCommentRepository;
     }
 
     public TicketResponseDto createTicket(TicketRequestDto dto) {
@@ -164,6 +177,15 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException("Ticket not found with id: " + ticketId));
 
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.hasRole("ADMIN");
+        boolean isAssignedTechnician = ticket.getAssignedTechnician() != null &&
+            ticket.getAssignedTechnician().getId().equals(currentUserId);
+
+        if (!isAdmin && !isAssignedTechnician) {
+            throw new UnauthorizedAccessException("Only the assigned technician or admin can update ticket status");
+        }
+
         TicketStatus previousStatus = ticket.getStatus();
 
         validateStatusTransition(previousStatus, dto.getStatus());
@@ -201,6 +223,25 @@ public class TicketService {
         }
 
         return mapToResponse(updated);
+    }
+
+    public void deleteTicket(Long ticketId) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new TicketNotFoundException("Ticket not found with id: " + ticketId));
+
+        List<TicketAttachment> attachments = ticketAttachmentRepository.findByTicketId(ticketId);
+        for (TicketAttachment attachment : attachments) {
+            try {
+                Path path = Paths.get(attachment.getFilePath());
+                Files.deleteIfExists(path);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to delete ticket attachment file: " + e.getMessage());
+            }
+        }
+
+        ticketAttachmentRepository.deleteAll(attachments);
+        ticketCommentRepository.deleteByTicketId(ticketId);
+        ticketRepository.delete(ticket);
     }
 
     private void validateStatusTransition(TicketStatus current, TicketStatus next) {
