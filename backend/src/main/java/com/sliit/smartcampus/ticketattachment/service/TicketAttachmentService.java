@@ -40,7 +40,7 @@ public class TicketAttachmentService {
 
         long existingCount = attachmentRepository.countByTicketId(ticketId);
         if (existingCount >= 3) {
-            throw new InvalidFileException("A ticket can only have up to 3 image attachments");
+            throw new InvalidFileException("A ticket can only have up to 3 attachments");
         }
 
         validateFile(file);
@@ -105,8 +105,10 @@ public class TicketAttachmentService {
         }
 
         String contentType = file.getContentType();
-        if (contentType == null || !contentType.startsWith("image/")) {
-            throw new InvalidFileException("Only image files are allowed");
+        boolean isImage = contentType != null && contentType.startsWith("image/");
+
+        if (!isImage) {
+            throw new InvalidFileException("Only image files are allowed (jpg, jpeg, png, gif, webp, etc.)");
         }
 
         long maxSize = 5 * 1024 * 1024; // 5MB

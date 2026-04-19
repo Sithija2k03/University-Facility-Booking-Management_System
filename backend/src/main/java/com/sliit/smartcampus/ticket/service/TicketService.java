@@ -9,35 +9,54 @@ import com.sliit.smartcampus.resource.repository.ResourceRepository;
 import com.sliit.smartcampus.ticket.dto.*;
 import com.sliit.smartcampus.ticket.entity.Ticket;
 import com.sliit.smartcampus.ticket.repository.TicketRepository;
+import com.sliit.smartcampus.ticketattachment.entity.TicketAttachment;
+import com.sliit.smartcampus.ticketattachment.repository.TicketAttachmentRepository;
+import com.sliit.smartcampus.ticketcomment.repository.TicketCommentRepository;
 import com.sliit.smartcampus.user.entity.User;
 import com.sliit.smartcampus.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.sliit.smartcampus.auth.security.SecurityUtils;
+import com.sliit.smartcampus.common.exception.UnauthorizedAccessException;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 
 @Service
+@Transactional
 public class TicketService {
 
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final ResourceRepository resourceRepository;
     private final NotificationService notificationService;
+    private final TicketAttachmentRepository ticketAttachmentRepository;
+    private final TicketCommentRepository ticketCommentRepository;
 
     public TicketService(
             TicketRepository ticketRepository,
             UserRepository userRepository,
             ResourceRepository resourceRepository,
-            NotificationService notificationService
+            NotificationService notificationService,
+            TicketAttachmentRepository ticketAttachmentRepository,
+            TicketCommentRepository ticketCommentRepository
     ) {
         this.ticketRepository = ticketRepository;
         this.userRepository = userRepository;
         this.resourceRepository = resourceRepository;
         this.notificationService = notificationService;
+        this.ticketAttachmentRepository = ticketAttachmentRepository;
+        this.ticketCommentRepository = ticketCommentRepository;
     }
 
     public TicketResponseDto createTicket(TicketRequestDto dto) {
-        User reporter = userRepository.findById(dto.getReporterId())
-                .orElseThrow(() -> new RuntimeException("Reporter not found with id: " + dto.getReporterId()));
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+
+        User reporter = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new RuntimeException("Reporter not found with id: " + currentUserId));
 
         Resource resource = null;
         if (dto.getResourceId() != null) {
@@ -80,11 +99,38 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(id)
                 .orElseThrow(() -> new TicketNotFoundException("Ticket not found with id: " + id));
 
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.hasRole("ADMIN");
+        boolean isTechnician = SecurityUtils.hasRole("TECHNICIAN");
+
+        boolean isReporter = ticket.getReporter().getId().equals(currentUserId);
+        boolean isAssignedTechnician = ticket.getAssignedTechnician() != null &&
+                ticket.getAssignedTechnician().getId().equals(currentUserId);
+
+        if (!isReporter && !isAdmin && !isTechnician && !isAssignedTechnician) {
+            throw new UnauthorizedAccessException("You are not allowed to view this ticket");
+        }
+
         return mapToResponse(ticket);
     }
 
     public List<TicketResponseDto> getTicketsByReporterId(Long reporterId) {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.hasRole("ADMIN");
+
+        if (!currentUserId.equals(reporterId) && !isAdmin) {
+            throw new UnauthorizedAccessException("You are not allowed to view other users' tickets");
+        }
+
         return ticketRepository.findByReporterId(reporterId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public List<TicketResponseDto> getMyTickets() {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        return ticketRepository.findByReporterId(currentUserId)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -131,6 +177,15 @@ public class TicketService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException("Ticket not found with id: " + ticketId));
 
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        boolean isAdmin = SecurityUtils.hasRole("ADMIN");
+        boolean isAssignedTechnician = ticket.getAssignedTechnician() != null &&
+            ticket.getAssignedTechnician().getId().equals(currentUserId);
+
+        if (!isAdmin && !isAssignedTechnician) {
+            throw new UnauthorizedAccessException("Only the assigned technician or admin can update ticket status");
+        }
+
         TicketStatus previousStatus = ticket.getStatus();
 
         validateStatusTransition(previousStatus, dto.getStatus());
@@ -170,6 +225,25 @@ public class TicketService {
         return mapToResponse(updated);
     }
 
+    public void deleteTicket(Long ticketId) {
+        Ticket ticket = ticketRepository.findById(ticketId)
+                .orElseThrow(() -> new TicketNotFoundException("Ticket not found with id: " + ticketId));
+
+        List<TicketAttachment> attachments = ticketAttachmentRepository.findByTicketId(ticketId);
+        for (TicketAttachment attachment : attachments) {
+            try {
+                Path path = Paths.get(attachment.getFilePath());
+                Files.deleteIfExists(path);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to delete ticket attachment file: " + e.getMessage());
+            }
+        }
+
+        ticketAttachmentRepository.deleteAll(attachments);
+        ticketCommentRepository.deleteByTicketId(ticketId);
+        ticketRepository.delete(ticket);
+    }
+
     private void validateStatusTransition(TicketStatus current, TicketStatus next) {
         if (current == TicketStatus.CLOSED || current == TicketStatus.REJECTED) {
             throw new IllegalArgumentException("Closed or rejected tickets cannot be changed");
@@ -185,8 +259,7 @@ public class TicketService {
             throw new IllegalArgumentException("IN_PROGRESS tickets can only move to RESOLVED or REJECTED");
         }
 
-        if (current == TicketStatus.RESOLVED &&
-                next != TicketStatus.CLOSED) {
+        if (current == TicketStatus.RESOLVED && next != TicketStatus.CLOSED) {
             throw new IllegalArgumentException("RESOLVED tickets can only move to CLOSED");
         }
     }

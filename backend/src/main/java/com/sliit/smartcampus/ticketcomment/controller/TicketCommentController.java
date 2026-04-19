@@ -1,5 +1,6 @@
 package com.sliit.smartcampus.ticketcomment.controller;
 
+import com.sliit.smartcampus.auth.security.SecurityUtils;
 import com.sliit.smartcampus.ticketcomment.dto.TicketCommentRequestDto;
 import com.sliit.smartcampus.ticketcomment.dto.TicketCommentResponseDto;
 import com.sliit.smartcampus.ticketcomment.dto.TicketCommentUpdateDto;
@@ -36,19 +37,19 @@ public class TicketCommentController {
     public TicketCommentResponseDto updateComment(
             @PathVariable Long ticketId,
             @PathVariable Long commentId,
-            @RequestParam Long requesterUserId,
             @Valid @RequestBody TicketCommentUpdateDto dto
     ) {
-        return commentService.updateComment(commentId, requesterUserId, dto);
+        Long requesterId = SecurityUtils.getCurrentUserId();
+        return commentService.updateComment(ticketId, commentId, requesterId, dto);
     }
 
     @DeleteMapping("/{commentId}")
     public String deleteComment(
             @PathVariable Long ticketId,
-            @PathVariable Long commentId,
-            @RequestParam Long requesterUserId
+            @PathVariable Long commentId
     ) {
-        commentService.deleteComment(commentId, requesterUserId);
+        Long requesterId = SecurityUtils.getCurrentUserId();
+        commentService.deleteComment(ticketId, commentId, requesterId);
         return "Comment deleted successfully";
     }
 }

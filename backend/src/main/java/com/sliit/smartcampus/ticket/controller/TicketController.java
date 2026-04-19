@@ -28,6 +28,11 @@ public class TicketController {
         return ticketService.getAllTickets();
     }
 
+    @GetMapping("/my")
+    public List<TicketResponseDto> getMyTickets() {
+        return ticketService.getMyTickets();
+    }
+
     @GetMapping("/{id}")
     public TicketResponseDto getTicketById(@PathVariable Long id) {
         return ticketService.getTicketById(id);
@@ -51,5 +56,11 @@ public class TicketController {
     @PatchMapping("/{id}/status")
     public TicketResponseDto updateStatus(@PathVariable Long id, @Valid @RequestBody TicketStatusUpdateDto dto) {
         return ticketService.updateStatus(id, dto);
+    }
+
+    @DeleteMapping("/{id}")
+    public String deleteTicket(@PathVariable Long id) {
+        ticketService.deleteTicket(id);
+        return "Ticket deleted successfully";
     }
 }
