@@ -81,7 +81,7 @@ public class OAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
         userRepository.save(user);
         response.sendRedirect("http://localhost:5173/oauth2/success");
-        
+
         PrintWriter writer = response.getWriter();
         writer.write(json);
         writer.flush();

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
 import { createTicket } from "../api/ticketApi";
+import { getAuthConfig } from "../api/authHelper";
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
 import TextInput from "../components/ui/TextInput";
@@ -27,7 +28,7 @@ const PRIORITIES = [
 ];
 
 function CreateTicketPage() {
-  const { user, buildBasicAuthHeader, credentials } = useAuth();
+  const { credentials, buildBasicAuthHeader } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -69,12 +70,16 @@ function CreateTicketPage() {
     setSuccessMessage("");
 
     try {
-      const authHeader = buildBasicAuthHeader(
-        credentials.email,
-        credentials.password
-      );
-      const payload = { ...form, reporterId: user.id };
-      const res = await createTicket(payload, authHeader);
+      const authConfig = getAuthConfig(credentials, buildBasicAuthHeader);
+      // No reporterId — backend resolves from security context
+      const payload = {
+        locationText: form.locationText,
+        category: form.category,
+        description: form.description,
+        priority: form.priority,
+        preferredContact: form.preferredContact,
+      };
+      const res = await createTicket(payload, authConfig);
       setSuccessMessage("Ticket created successfully. Redirecting...");
       setTimeout(() => {
         navigate(`/tickets/${res.data.id}`);
@@ -96,7 +101,6 @@ function CreateTicketPage() {
       <Card className="max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-5">
 
-          {/* Location */}
           <TextInput
             label="Location / Area"
             name="locationText"
@@ -106,7 +110,6 @@ function CreateTicketPage() {
             error={errors.locationText}
           />
 
-          {/* Category */}
           <SelectInput
             label="Category"
             name="category"
@@ -115,11 +118,8 @@ function CreateTicketPage() {
             options={CATEGORIES}
           />
 
-          {/* Description */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">
-              Description
-            </label>
+            <label className="text-sm font-medium text-slate-300">Description</label>
             <textarea
               name="description"
               value={form.description}
@@ -135,7 +135,6 @@ function CreateTicketPage() {
             )}
           </div>
 
-          {/* Priority */}
           <SelectInput
             label="Priority"
             name="priority"
@@ -144,7 +143,6 @@ function CreateTicketPage() {
             options={PRIORITIES}
           />
 
-          {/* Preferred Contact */}
           <TextInput
             label="Preferred Contact"
             name="preferredContact"
@@ -154,7 +152,6 @@ function CreateTicketPage() {
             error={errors.preferredContact}
           />
 
-          {/* Server Error */}
           {serverError && (
             <motion.p
               initial={{ opacity: 0 }}
@@ -175,16 +172,11 @@ function CreateTicketPage() {
             </motion.p>
           )}
 
-          {/* Actions */}
           <div className="flex gap-3 pt-2">
             <Button type="submit" disabled={loading}>
               {loading ? "Submitting..." : "Submit Ticket"}
             </Button>
-            <Button
-              variant="ghost"
-              onClick={() => navigate("/tickets/my")}
-              disabled={loading}
-            >
+            <Button variant="ghost" onClick={() => navigate("/tickets/my")} disabled={loading}>
               Cancel
             </Button>
           </div>

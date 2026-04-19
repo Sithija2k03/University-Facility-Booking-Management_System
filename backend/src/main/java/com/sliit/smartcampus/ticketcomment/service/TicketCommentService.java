@@ -1,5 +1,6 @@
 package com.sliit.smartcampus.ticketcomment.service;
 
+import com.sliit.smartcampus.auth.security.SecurityUtils;
 import com.sliit.smartcampus.common.enums.RoleType;
 import com.sliit.smartcampus.common.exception.TicketCommentNotFoundException;
 import com.sliit.smartcampus.common.exception.TicketNotFoundException;
@@ -44,8 +45,9 @@ public class TicketCommentService {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new TicketNotFoundException("Ticket not found with id: " + ticketId));
 
-        User author = userRepository.findById(dto.getAuthorId())
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + dto.getAuthorId()));
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        User author = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + currentUserId));
 
         TicketComment comment = TicketComment.builder()
                 .ticket(ticket)
@@ -55,7 +57,6 @@ public class TicketCommentService {
 
         TicketComment saved = commentRepository.save(comment);
 
-        // Notify ticket reporter if the commenter is someone else
         if (!ticket.getReporter().getId().equals(author.getId())) {
             notificationService.createNotification(
                     ticket.getReporter().getId(),
@@ -66,11 +67,9 @@ public class TicketCommentService {
             );
         }
 
-        // Notify assigned technician if there is one and they are not the commenter and not the reporter
         if (ticket.getAssignedTechnician() != null
                 && !ticket.getAssignedTechnician().getId().equals(author.getId())
                 && !ticket.getAssignedTechnician().getId().equals(ticket.getReporter().getId())) {
-
             notificationService.createNotification(
                     ticket.getAssignedTechnician().getId(),
                     "New Comment on Assigned Ticket",

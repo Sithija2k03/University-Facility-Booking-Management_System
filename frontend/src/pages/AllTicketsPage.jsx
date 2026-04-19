@@ -3,26 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
 import { getAllTickets, getTicketsByStatus } from "../api/ticketApi";
+import { getAuthConfig } from "../api/authHelper";
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import StatusBadge from "../components/ui/StatusBadge";
 import PriorityBadge from "../components/ui/PriorityBadge";
-
-const STATUS_STYLES = {
-  OPEN: "bg-blue-500/15 text-blue-300 border-blue-500/30",
-  IN_PROGRESS: "bg-yellow-500/15 text-yellow-300 border-yellow-500/30",
-  RESOLVED: "bg-green-500/15 text-green-300 border-green-500/30",
-  CLOSED: "bg-slate-500/15 text-slate-400 border-slate-500/30",
-  REJECTED: "bg-red-500/15 text-red-300 border-red-500/30",
-};
-
-const PRIORITY_STYLES = {
-  LOW: "text-slate-400",
-  MEDIUM: "text-yellow-400",
-  HIGH: "text-orange-400",
-  CRITICAL: "text-red-400 font-semibold",
-};
 
 const STATUS_OPTIONS = ["ALL", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED", "REJECTED"];
 
@@ -38,23 +24,19 @@ function AllTicketsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const authHeader = useMemo(() => {
-    if (!credentials?.email || !credentials?.password) return null;
-    return buildBasicAuthHeader(credentials.email, credentials.password);
-  }, [buildBasicAuthHeader, credentials]);
+  const authConfig = useMemo(
+    () => getAuthConfig(credentials, buildBasicAuthHeader),
+    [credentials, buildBasicAuthHeader]
+  );
 
   const fetchTickets = async (status = "ALL") => {
-    if (!authHeader) return;
-
     setLoading(true);
     setError("");
-
     try {
       const response =
         status === "ALL"
-          ? await getAllTickets(authHeader)
-          : await getTicketsByStatus(status, authHeader);
-
+          ? await getAllTickets(authConfig)
+          : await getTicketsByStatus(status, authConfig);
       setTickets(response.data || []);
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to load tickets.");
@@ -65,7 +47,7 @@ function AllTicketsPage() {
 
   useEffect(() => {
     fetchTickets(statusFilter);
-  }, [authHeader, statusFilter]);
+  }, [authConfig, statusFilter]);
 
   const visibleTickets = useMemo(() => {
     if (isAdmin) return tickets;
@@ -78,7 +60,6 @@ function AllTicketsPage() {
   const filteredTickets = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return visibleTickets;
-
     return visibleTickets.filter((t) => {
       const values = [
         String(t.id ?? ""),
@@ -90,7 +71,6 @@ function AllTicketsPage() {
         t.status ?? "",
         t.priority ?? "",
       ];
-
       return values.some((v) => v.toLowerCase().includes(q));
     });
   }, [search, visibleTickets]);
@@ -100,7 +80,9 @@ function AllTicketsPage() {
       <PageShell title="All Tickets" subtitle="Admin access required">
         <Card>
           <p className="text-sm text-red-300">Only admins and technicians can access this page.</p>
-          <Button className="mt-4" onClick={() => navigate("/dashboard")}>Go to Dashboard</Button>
+          <Button className="mt-4" onClick={() => navigate("/dashboard")}>
+            Go to Dashboard
+          </Button>
         </Card>
       </PageShell>
     );
@@ -153,7 +135,9 @@ function AllTicketsPage() {
         </div>
       </Card>
 
-      {loading && <p className="text-sm text-slate-400 animate-pulse">Loading tickets...</p>}
+      {loading && (
+        <p className="text-sm text-slate-400 animate-pulse">Loading tickets...</p>
+      )}
 
       {error && (
         <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
@@ -183,7 +167,6 @@ function AllTicketsPage() {
                     <StatusBadge status={ticket.status} />
                     <PriorityBadge priority={ticket.priority} />
                   </div>
-
                   <p className="text-sm font-medium text-slate-100">{ticket.category}</p>
                   <p className="text-xs text-slate-400">{ticket.description}</p>
                   <p className="text-xs text-slate-500">Location: {ticket.locationText}</p>
@@ -196,7 +179,10 @@ function AllTicketsPage() {
                 </div>
 
                 <div className="flex flex-row gap-2 lg:flex-col lg:items-end">
-                  <Button variant="secondary" onClick={() => navigate(`/tickets/${ticket.id}`)}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => navigate(`/tickets/${ticket.id}`)}
+                  >
                     View Details
                   </Button>
                   <Button onClick={() => navigate(`/tickets/${ticket.id}/manage`)}>

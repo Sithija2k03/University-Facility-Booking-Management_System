@@ -3,40 +3,26 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
 import { getMyTickets } from "../api/ticketApi";
+import { getAuthConfig } from "../api/authHelper";
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import StatusBadge from "../components/ui/StatusBadge";
 import PriorityBadge from "../components/ui/PriorityBadge";
 
-const STATUS_STYLES = {
-  OPEN:        "bg-blue-500/15 text-blue-300 border-blue-500/30",
-  IN_PROGRESS: "bg-yellow-500/15 text-yellow-300 border-yellow-500/30",
-  RESOLVED:    "bg-green-500/15 text-green-300 border-green-500/30",
-  CLOSED:      "bg-slate-500/15 text-slate-400 border-slate-500/30",
-  REJECTED:    "bg-red-500/15 text-red-300 border-red-500/30",
-};
-
-const PRIORITY_STYLES = {
-  LOW: "bg-slate-500/15 text-slate-300 border-slate-500/30",
-  MEDIUM: "bg-yellow-500/15 text-yellow-300 border-yellow-500/30",
-  HIGH: "bg-orange-500/15 text-orange-300 border-orange-500/30",
-  CRITICAL: "bg-red-500/15 text-red-300 border-red-500/30",
-};
-
 function MyTicketsPage() {
-  const { user, credentials, buildBasicAuthHeader } = useAuth();
+  const { credentials, buildBasicAuthHeader } = useAuth();
   const navigate = useNavigate();
 
   const [tickets, setTickets] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchTickets = async () => {
       try {
-        const authHeader = buildBasicAuthHeader(credentials.email, credentials.password);
-        const res = await getMyTickets(user.id, authHeader);
+        const config = getAuthConfig(credentials, buildBasicAuthHeader);
+        const res = await getMyTickets(config);
         setTickets(res.data);
       } catch (err) {
         setError(err?.response?.data?.message || "Failed to load tickets.");
@@ -86,44 +72,34 @@ function MyTicketsPage() {
           >
             <Card>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-
-                {/* LEFT — main info */}
                 <div className="flex-1 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-xs text-slate-500">#{ticket.id}</span>
                     <StatusBadge status={ticket.status} />
                     <PriorityBadge priority={ticket.priority} />
                   </div>
-
                   <p className="text-sm font-medium text-slate-100">{ticket.category}</p>
                   <p className="text-xs text-slate-400 line-clamp-2">{ticket.description}</p>
-                  <p className="text-xs text-slate-500">📍 {ticket.locationText}</p>
-
+                  <p className="text-xs text-slate-500">{ticket.locationText}</p>
                   {ticket.assignedTechnicianName && (
                     <p className="text-xs text-slate-400">
-                      🔧 Assigned to:{" "}
+                      Assigned to:{" "}
                       <span className="text-orange-300">{ticket.assignedTechnicianName}</span>
                     </p>
                   )}
-
                   {ticket.resolutionNotes && ticket.resolutionNotes.trim() && (
                     <p className="text-xs text-slate-400">
-                      📝 Resolution: {ticket.resolutionNotes}
+                      Resolution: {ticket.resolutionNotes}
                     </p>
                   )}
                 </div>
-
-                {/* RIGHT — date + action */}
                 <div className="flex flex-col items-end gap-3">
                   <p className="text-xs text-slate-500">
                     {new Date(ticket.createdAt).toLocaleDateString("en-GB", {
                       day: "numeric", month: "short", year: "numeric",
                     })}
                   </p>
-                  <Button
-                    variant="secondary"
-                    onClick={() => navigate(`/tickets/${ticket.id}`)}
-                  >
+                  <Button variant="secondary" onClick={() => navigate(`/tickets/${ticket.id}`)}>
                     View Details
                   </Button>
                 </div>

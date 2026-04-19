@@ -1,89 +1,65 @@
 import axiosClient from "./axiosClient";
 
+const buildConfig = (authConfig, extra = {}) => ({
+  ...authConfig,
+  ...extra,
+  headers: {
+    ...authConfig?.headers,
+    ...extra?.headers,
+  },
+});
+
 // ─── TICKETS ────────────────────────────────────────────────────────────────
 
-export const createTicket = (data, authHeader) =>
-  axiosClient.post("/api/tickets", data, {
-    headers: { Authorization: authHeader },
-  });
+export const createTicket = (data, authConfig) =>
+  axiosClient.post("/api/tickets", data, authConfig);
 
-export const getAllTickets = (authHeader) =>
-  axiosClient.get("/api/tickets", {
-    headers: { Authorization: authHeader },
-  });
+export const getAllTickets = (authConfig) =>
+  axiosClient.get("/api/tickets", authConfig);
 
-export const getTicketById = (id, authHeader) =>
-  axiosClient.get(`/api/tickets/${id}`, {
-    headers: { Authorization: authHeader },
-  });
+export const getTicketById = (id, authConfig) =>
+  axiosClient.get(`/api/tickets/${id}`, authConfig);
 
-export const getMyTickets = (reporterId, authHeader) =>
-  axiosClient.get(`/api/tickets/reporter/${reporterId}`, {
-    headers: { Authorization: authHeader },
-  });
+export const getMyTickets = (authConfig) =>
+  axiosClient.get("/api/tickets/my", authConfig);
 
-export const getTicketsByStatus = (status, authHeader) =>
-  axiosClient.get(`/api/tickets/status/${status}`, {
-    headers: { Authorization: authHeader },
-  });
+export const getTicketsByStatus = (status, authConfig) =>
+  axiosClient.get(`/api/tickets/status/${status}`, authConfig);
 
-export const assignTechnician = (ticketId, technicianId, authHeader) =>
-  axiosClient.patch(
-    `/api/tickets/${ticketId}/assign`,
-    { technicianId },
-    { headers: { Authorization: authHeader } }
-  );
+export const assignTechnician = (ticketId, technicianId, authConfig) =>
+  axiosClient.patch(`/api/tickets/${ticketId}/assign`, { technicianId }, authConfig);
 
-export const updateTicketStatus = (ticketId, data, authHeader) =>
-  axiosClient.patch(`/api/tickets/${ticketId}/status`, data, {
-    headers: { Authorization: authHeader },
-  });
+export const updateTicketStatus = (ticketId, data, authConfig) =>
+  axiosClient.patch(`/api/tickets/${ticketId}/status`, data, authConfig);
 
 // ─── ATTACHMENTS ────────────────────────────────────────────────────────────
 
-export const uploadAttachment = (ticketId, file, authHeader) => {
+export const uploadAttachment = (ticketId, file, authConfig) => {
   const formData = new FormData();
   formData.append("file", file);
-  return axiosClient.post(`/api/tickets/${ticketId}/attachments`, formData, {
-    headers: {
-      Authorization: authHeader,
-      "Content-Type": "multipart/form-data",
-    },
-  });
+  return axiosClient.post(
+    `/api/tickets/${ticketId}/attachments`,
+    formData,
+    buildConfig(authConfig, { headers: { "Content-Type": "multipart/form-data" } })
+  );
 };
 
-export const getAttachments = (ticketId, authHeader) =>
-  axiosClient.get(`/api/tickets/${ticketId}/attachments`, {
-    headers: { Authorization: authHeader },
-  });
+export const getAttachments = (ticketId, authConfig) =>
+  axiosClient.get(`/api/tickets/${ticketId}/attachments`, authConfig);
 
-export const deleteAttachment = (ticketId, attachmentId, authHeader) =>
-  axiosClient.delete(
-    `/api/tickets/${ticketId}/attachments/${attachmentId}`,
-    { headers: { Authorization: authHeader } }
-  );
+export const deleteAttachment = (ticketId, attachmentId, authConfig) =>
+  axiosClient.delete(`/api/tickets/${ticketId}/attachments/${attachmentId}`, authConfig);
 
 // ─── COMMENTS ───────────────────────────────────────────────────────────────
 
-export const addComment = (ticketId, data, authHeader) =>
-  axiosClient.post(`/api/tickets/${ticketId}/comments`, data, {
-    headers: { Authorization: authHeader },
-  });
+export const addComment = (ticketId, data, authConfig) =>
+  axiosClient.post(`/api/tickets/${ticketId}/comments`, data, authConfig);
 
-export const getComments = (ticketId, authHeader) =>
-  axiosClient.get(`/api/tickets/${ticketId}/comments`, {
-    headers: { Authorization: authHeader },
-  });
+export const getComments = (ticketId, authConfig) =>
+  axiosClient.get(`/api/tickets/${ticketId}/comments`, authConfig);
 
-export const updateComment = (ticketId, commentId, requesterUserId, data, authHeader) =>
-  axiosClient.put(
-    `/api/tickets/${ticketId}/comments/${commentId}?requesterUserId=${requesterUserId}`,
-    data,
-    { headers: { Authorization: authHeader } }
-  );
+export const updateComment = (ticketId, commentId, data, authConfig) =>
+  axiosClient.put(`/api/tickets/${ticketId}/comments/${commentId}`, data, authConfig);
 
-export const deleteComment = (ticketId, commentId, requesterUserId, authHeader) =>
-  axiosClient.delete(
-    `/api/tickets/${ticketId}/comments/${commentId}?requesterUserId=${requesterUserId}`,
-    { headers: { Authorization: authHeader } }
-  );
+export const deleteComment = (ticketId, commentId, authConfig) =>
+  axiosClient.delete(`/api/tickets/${ticketId}/comments/${commentId}`, authConfig);
