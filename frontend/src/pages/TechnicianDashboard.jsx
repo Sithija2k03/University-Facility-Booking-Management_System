@@ -1,14 +1,12 @@
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import axiosClient from "../api/axiosClient";
+import { useAuth } from "../auth/AuthContext";
+import { getAuthConfig } from "../api/authHelper";
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
-
-const stats = [
-  { label: "Assigned Tickets", value: "09", hint: "Cases currently under your responsibility" },
-  { label: "In Progress", value: "05", hint: "Actively being investigated or repaired" },
-  { label: "Resolved Today", value: "02", hint: "Tickets completed in this cycle" },
-];
 
 const taskCards = [
   {
@@ -16,12 +14,6 @@ const taskCards = [
     desc: "Open the ticket workspace and review the incidents currently assigned to you.",
     actionLabel: "Open Ticket Queue",
     path: "/tickets/all",
-  },
-  {
-    title: "My Tickets",
-    desc: "Review tickets you have reported or tracked for your own follow-up.",
-    actionLabel: "Open My Tickets",
-    path: "/tickets/my",
   },
   {
     title: "Status Updates",
@@ -45,6 +37,65 @@ const taskCards = [
 
 function TechnicianDashboard() {
   const navigate = useNavigate();
+  const { user, credentials, buildBasicAuthHeader } = useAuth();
+
+  const [stats, setStats] = useState({
+    assignedTickets: 0,
+    inProgressTickets: 0,
+    resolvedTickets: 0,
+    unreadNotifications: 0,
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  const authConfig = useMemo(
+    () => getAuthConfig(credentials, buildBasicAuthHeader),
+    [credentials, buildBasicAuthHeader]
+  );
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      if (!user) return;
+      try {
+        setLoadingStats(true);
+        const [ticketsRes, unreadRes] = await Promise.all([
+          axiosClient.get("/api/tickets", authConfig),
+          axiosClient.get(`/api/notifications/${user.id}/unread-count`, authConfig),
+        ]);
+
+        const tickets = ticketsRes.data || [];
+        const unreadNotifications =
+          typeof unreadRes.data === "number"
+            ? unreadRes.data
+            : unreadRes.data?.count || 0;
+
+        const assignedTickets = tickets.filter(
+          (t) => t.assignedTechnicianId === user.id
+        );
+
+        setStats({
+          assignedTickets: assignedTickets.length,
+          inProgressTickets: assignedTickets.filter((t) => t.status === "IN_PROGRESS").length,
+          resolvedTickets: assignedTickets.filter((t) =>
+            ["RESOLVED", "CLOSED"].includes(t.status)
+          ).length,
+          unreadNotifications,
+        });
+      } catch (error) {
+        console.error("Failed to load technician dashboard stats", error);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, [user, authConfig]);
+
+  const statCards = [
+    { label: "Assigned Tickets", value: stats.assignedTickets, hint: "Cases currently under your responsibility" },
+    { label: "In Progress", value: stats.inProgressTickets, hint: "Actively being investigated or repaired" },
+    { label: "Resolved", value: stats.resolvedTickets, hint: "Tickets completed or closed" },
+    { label: "Unread Alerts", value: stats.unreadNotifications, hint: "Notifications waiting" },
+  ];
 
   return (
     <PageShell
@@ -52,8 +103,8 @@ function TechnicianDashboard() {
       subtitle="Handle assigned incidents efficiently and keep issue resolution moving."
     >
       <div className="space-y-6">
-        <div className="grid gap-5 md:grid-cols-3">
-          {stats.map((item, index) => (
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          {statCards.map((item, index) => (
             <motion.div
               key={item.label}
               initial={{ opacity: 0, y: 18 }}
@@ -62,7 +113,9 @@ function TechnicianDashboard() {
             >
               <Card className="h-full">
                 <p className="text-sm font-medium text-slate-400">{item.label}</p>
-                <h3 className="mt-3 text-3xl font-bold text-slate-100">{item.value}</h3>
+                <h3 className="mt-3 text-3xl font-bold text-slate-100">
+                  {loadingStats ? "..." : item.value}
+                </h3>
                 <p className="mt-2 text-sm leading-6 text-slate-500">{item.hint}</p>
               </Card>
             </motion.div>
@@ -70,16 +123,10 @@ function TechnicianDashboard() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
             <Card className="h-full overflow-hidden">
               <div className="rounded-3xl border border-orange-500/20 bg-gradient-to-r from-orange-500/10 via-orange-400/5 to-transparent p-6">
-                <p className="text-xs uppercase tracking-[0.2em] text-orange-300">
-                  Technical Workflow
-                </p>
+                <p className="text-xs uppercase tracking-[0.2em] text-orange-300">Technical Workflow</p>
                 <h2 className="mt-3 text-3xl font-bold text-slate-50">
                   Focus on resolution, updates, and field context
                 </h2>
@@ -87,7 +134,6 @@ function TechnicianDashboard() {
                   Review assigned incidents, add progress notes, inspect related resources,
                   and move tickets toward resolution with clear operational visibility.
                 </p>
-
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button variant="primary" onClick={() => navigate("/tickets/all")}>
                     Open Assigned Tickets
@@ -103,18 +149,14 @@ function TechnicianDashboard() {
             </Card>
           </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.35, delay: 0.08 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.08 }}>
             <Card className="h-full">
               <h3 className="text-lg font-semibold text-slate-100">Technician Focus</h3>
               <div className="mt-5 space-y-4">
                 {[
-                  "Prioritize high-impact incidents affecting shared campus resources.",
-                  "Keep status notes updated so admins and reporters see real progress.",
-                  "Use ticket comments and attachments to preserve troubleshooting context.",
+                  `${loadingStats ? "..." : stats.assignedTickets} ticket(s) are currently assigned to you.`,
+                  `${loadingStats ? "..." : stats.inProgressTickets} ticket(s) are actively in progress.`,
+                  `${loadingStats ? "..." : stats.unreadNotifications} unread notification(s) may need action.`,
                 ].map((item) => (
                   <div
                     key={item}
@@ -131,9 +173,7 @@ function TechnicianDashboard() {
         <div>
           <div className="mb-4">
             <h2 className="text-xl font-semibold text-slate-100">Work Area</h2>
-            <p className="mt-1 text-sm text-slate-400">
-              Open the main technician actions directly from here.
-            </p>
+            <p className="mt-1 text-sm text-slate-400">Open the main technician actions directly from here.</p>
           </div>
 
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">

@@ -1,15 +1,11 @@
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import axiosClient from "../api/axiosClient";
+import { useAuth } from "../auth/AuthContext";
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
-
-const stats = [
-  { label: "Resources", value: "24", hint: "Managed rooms, labs, and equipment" },
-  { label: "Pending Bookings", value: "08", hint: "Need approval or rejection" },
-  { label: "Open Tickets", value: "11", hint: "Operational issues in progress" },
-  { label: "Unread Alerts", value: "07", hint: "Notifications requiring attention" },
-];
 
 const managementCards = [
   {
@@ -40,6 +36,98 @@ const managementCards = [
 
 function AdminDashboard() {
   const navigate = useNavigate();
+  const { user, credentials, authMode, buildBasicAuthHeader } = useAuth();
+
+  const [stats, setStats] = useState({
+    totalResources: 0,
+    pendingBookings: 0,
+    openTickets: 0,
+    unreadNotifications: 0,
+  });
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  const requestConfig = useMemo(() => {
+    if (authMode === "basic" && credentials) {
+      return {
+        headers: {
+          Authorization: buildBasicAuthHeader(
+            credentials.email,
+            credentials.password
+          ),
+        },
+      };
+    }
+    return {};
+  }, [authMode, credentials, buildBasicAuthHeader]);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      if (!user) return;
+
+      try {
+        setLoadingStats(true);
+
+        const [resourcesRes, bookingsRes, ticketsRes, unreadRes] =
+          await Promise.all([
+            axiosClient.get("/api/resources", requestConfig),
+            axiosClient.get("/api/bookings", requestConfig),
+            axiosClient.get("/api/tickets", requestConfig),
+            axiosClient.get(
+              `/api/notifications/${user.id}/unread-count`,
+              requestConfig
+            ),
+          ]);
+
+        const resources = resourcesRes.data || [];
+        const bookings = bookingsRes.data || [];
+        const tickets = ticketsRes.data || [];
+        const unreadNotifications =
+          typeof unreadRes.data === "number"
+            ? unreadRes.data
+            : unreadRes.data?.count || 0;
+
+        setStats({
+          totalResources: resources.length,
+          pendingBookings: bookings.filter(
+            (booking) => booking.status === "PENDING"
+          ).length,
+          openTickets: tickets.filter((ticket) =>
+            ["OPEN", "IN_PROGRESS"].includes(ticket.status)
+          ).length,
+          unreadNotifications,
+        });
+      } catch (error) {
+        console.error("Failed to load admin dashboard stats", error);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    fetchDashboardStats();
+  }, [user, requestConfig]);
+
+  const statCards = [
+    {
+      label: "Resources",
+      value: stats.totalResources,
+      hint: "Managed rooms, labs, and equipment",
+    },
+    {
+      label: "Pending Bookings",
+      value: stats.pendingBookings,
+      hint: "Need approval or rejection",
+    },
+    {
+      label: "Open Tickets",
+      value: stats.openTickets,
+      hint: "Operational issues in progress",
+    },
+    {
+      label: "Unread Alerts",
+      value: stats.unreadNotifications,
+      hint: "Notifications requiring attention",
+    },
+  ];
 
   return (
     <PageShell
@@ -48,7 +136,7 @@ function AdminDashboard() {
     >
       <div className="space-y-6">
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          {stats.map((item, index) => (
+          {statCards.map((item, index) => (
             <motion.div
               key={item.label}
               initial={{ opacity: 0, y: 18 }}
@@ -56,9 +144,15 @@ function AdminDashboard() {
               transition={{ duration: 0.3, delay: index * 0.06 }}
             >
               <Card className="h-full">
-                <p className="text-sm font-medium text-slate-400">{item.label}</p>
-                <h3 className="mt-3 text-3xl font-bold text-slate-100">{item.value}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-500">{item.hint}</p>
+                <p className="text-sm font-medium text-slate-400">
+                  {item.label}
+                </p>
+                <h3 className="mt-3 text-3xl font-bold text-slate-100">
+                  {loadingStats ? "..." : item.value}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  {item.hint}
+                </p>
               </Card>
             </motion.div>
           ))}
@@ -79,15 +173,21 @@ function AdminDashboard() {
                   Keep the campus platform efficient and accountable
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">
-                  Oversee bookings, resource records, and issue resolution while keeping
-                  operational workflows aligned with campus policies.
+                  Oversee bookings, resource records, and issue resolution while
+                  keeping operational workflows aligned with campus policies.
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <Button variant="primary" onClick={() => navigate("/bookings/all")}>
+                  <Button
+                    variant="primary"
+                    onClick={() => navigate("/bookings/all")}
+                  >
                     Approve Bookings
                   </Button>
-                  <Button variant="secondary" onClick={() => navigate("/tickets/manage")}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => navigate("/tickets/manage")}
+                  >
                     Manage Tickets
                   </Button>
                 </div>
@@ -101,12 +201,14 @@ function AdminDashboard() {
             transition={{ duration: 0.35, delay: 0.08 }}
           >
             <Card className="h-full">
-              <h3 className="text-lg font-semibold text-slate-100">Admin Priorities</h3>
+              <h3 className="text-lg font-semibold text-slate-100">
+                Admin Priorities
+              </h3>
               <div className="mt-5 space-y-4">
                 {[
-                  "Review pending bookings early to reduce scheduling delays.",
-                  "Assign technicians to high-priority issues without backlog.",
-                  "Keep resource records current so users book accurate items and spaces.",
+                  `${stats.pendingBookings} booking request(s) are pending review.`,
+                  `${stats.openTickets} ticket(s) are still open or in progress.`,
+                  `${stats.unreadNotifications} unread alert(s) require attention.`,
                 ].map((item) => (
                   <div
                     key={item}
@@ -122,7 +224,9 @@ function AdminDashboard() {
 
         <div>
           <div className="mb-4">
-            <h2 className="text-xl font-semibold text-slate-100">Management Actions</h2>
+            <h2 className="text-xl font-semibold text-slate-100">
+              Management Actions
+            </h2>
             <p className="mt-1 text-sm text-slate-400">
               Open the main operational areas directly from the dashboard.
             </p>
@@ -138,12 +242,19 @@ function AdminDashboard() {
               >
                 <Card className="flex h-full flex-col justify-between transition-all duration-200 hover:border-orange-500/40 hover:shadow-[0_0_20px_rgba(249,115,22,0.12)]">
                   <div>
-                    <h3 className="text-lg font-semibold text-slate-100">{card.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-slate-400">{card.desc}</p>
+                    <h3 className="text-lg font-semibold text-slate-100">
+                      {card.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-400">
+                      {card.desc}
+                    </p>
                   </div>
 
                   <div className="mt-5">
-                    <Button variant="secondary" onClick={() => navigate(card.to)}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => navigate(card.to)}
+                    >
                       {card.action}
                     </Button>
                   </div>
