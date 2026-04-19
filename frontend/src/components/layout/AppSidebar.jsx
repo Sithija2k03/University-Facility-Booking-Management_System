@@ -96,13 +96,6 @@ function AppSidebar() {
             </Link>
 
             <Link
-              to="/tickets/my"
-              className={`${linkBase} ${isActive("/tickets/my") ? activeClass : inactiveClass}`}
-            >
-              My Tickets
-            </Link>
-
-            <Link
               to="/tickets/all"
               className={`${linkBase} ${isActive("/tickets/all") ? activeClass : inactiveClass}`}
             >
@@ -114,13 +107,6 @@ function AppSidebar() {
         {user.role === "TECHNICIAN" && (
           <>
             <p className="mt-6 px-2 text-xs uppercase text-slate-500">Tickets</p>
-
-            <Link
-              to="/tickets/my"
-              className={`${linkBase} ${isActive("/tickets/my") ? activeClass : inactiveClass}`}
-            >
-              My Tickets
-            </Link>
 
             <Link
               to="/tickets/all"

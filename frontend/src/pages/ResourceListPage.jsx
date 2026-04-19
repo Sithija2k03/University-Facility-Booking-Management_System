@@ -15,6 +15,8 @@ function ResourceListPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchType, setSearchType] = useState("");
+  const [searchText, setSearchText] = useState("");
+  const [searchCapacity, setSearchCapacity] = useState("");
 
   const typeOptions = useMemo(
     () => [
@@ -48,6 +50,30 @@ function ResourceListPage() {
       setLoading(false);
     }
   };
+
+  const filteredResources = useMemo(() => {
+    let result = resources;
+
+    if (searchText.trim()) {
+      const q = searchText.trim().toLowerCase();
+      result = result.filter(
+        (r) =>
+          (r.name && r.name.toLowerCase().includes(q)) ||
+          (r.location && r.location.toLowerCase().includes(q))
+      );
+    }
+
+    if (searchCapacity !== "") {
+      const cap = Number(searchCapacity);
+      if (!isNaN(cap) && cap > 0) {
+        result = result.filter(
+          (r) => r.capacity != null && r.capacity >= cap
+        );
+      }
+    }
+
+    return result;
+  }, [resources, searchText, searchCapacity]);
 
   const handleDelete = async (id) => {
     const confirmed = window.confirm("Are you sure you want to delete this resource?");
@@ -86,6 +112,33 @@ function ResourceListPage() {
             onChange={(e) => setSearchType(e.target.value)}
             options={typeOptions}
           />
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Search by Name or Location
+            </label>
+            <input
+              type="text"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              placeholder="e.g. Lab A, Building B..."
+              className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-2.5 text-sm text-slate-100 outline-none transition focus:border-orange-400"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Min Capacity
+            </label>
+            <input
+              type="number"
+              value={searchCapacity}
+              onChange={(e) => setSearchCapacity(e.target.value)}
+              placeholder="e.g. 30"
+              min="1"
+              className="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-4 py-2.5 text-sm text-slate-100 outline-none transition focus:border-orange-400"
+            />
+          </div>
         </div>
       </Card>
 
@@ -97,13 +150,13 @@ function ResourceListPage() {
         <Card>
           <p className="text-sm text-red-400">{error}</p>
         </Card>
-      ) : resources.length === 0 ? (
+      ) : filteredResources.length === 0 ? (
         <Card className="text-center py-10">
           <p className="text-sm text-slate-400">No resources found.</p>
         </Card>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-          {resources.map((resource, index) => (
+          {filteredResources.map((resource, index) => (
             <motion.div
               key={resource.id}
               initial={{ opacity: 0, y: 18 }}
