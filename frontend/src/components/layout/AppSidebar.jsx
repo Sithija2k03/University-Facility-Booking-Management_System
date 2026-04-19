@@ -23,75 +23,54 @@ function AppSidebar() {
         <p className="text-xs uppercase tracking-[0.3em] text-white">
           Smart Campus
         </p>
-
-        <img
-          src={logo}
-          alt="Logo"
-          className="mt-1 h-32 w-32 object-contain"
-        />
+        <img src={logo} alt="Logo" className="mt-1 h-32 w-32 object-contain" />
       </div>
 
       <nav className="space-y-2">
         <Link
           to="/dashboard"
-          className={`${linkBase} ${
-            isActive("/dashboard") ? activeClass : inactiveClass
-          }`}
+          className={`${linkBase} ${isActive("/dashboard") ? activeClass : inactiveClass}`}
         >
           Dashboard
         </Link>
 
         <Link
           to="/resources"
-          className={`${linkBase} ${
-            isActive("/resources") ? activeClass : inactiveClass
-          }`}
+          className={`${linkBase} ${isActive("/resources") ? activeClass : inactiveClass}`}
         >
           Resources
         </Link>
 
         {user.role === "USER" && (
           <>
-            <p className="mt-6 px-2 text-xs uppercase text-slate-500">
-              Booking
-            </p>
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">Booking</p>
 
             <Link
               to="/bookings/create"
-              className={`${linkBase} ${
-                isActive("/bookings/create") ? activeClass : inactiveClass
-              }`}
+              className={`${linkBase} ${isActive("/bookings/create") ? activeClass : inactiveClass}`}
             >
               Create Booking
             </Link>
 
             <Link
               to="/bookings/my"
-              className={`${linkBase} ${
-                isActive("/bookings/my") ? activeClass : inactiveClass
-              }`}
+              className={`${linkBase} ${isActive("/bookings/my") ? activeClass : inactiveClass}`}
             >
               My Bookings
             </Link>
 
-            <p className="mt-6 px-2 text-xs uppercase text-slate-500">
-              Tickets
-            </p>
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">Tickets</p>
 
             <Link
               to="/tickets/create"
-              className={`${linkBase} ${
-                isActive("/tickets/create") ? activeClass : inactiveClass
-              }`}
+              className={`${linkBase} ${isActive("/tickets/create") ? activeClass : inactiveClass}`}
             >
               Create Ticket
             </Link>
 
             <Link
               to="/tickets/my"
-              className={`${linkBase} ${
-                isActive("/tickets/my") ? activeClass : inactiveClass
-              }`}
+              className={`${linkBase} ${isActive("/tickets/my") ? activeClass : inactiveClass}`}
             >
               My Tickets
             </Link>
@@ -100,33 +79,32 @@ function AppSidebar() {
 
         {user.role === "ADMIN" && (
           <>
-            <p className="mt-6 px-2 text-xs uppercase text-slate-500">
-              Admin
-            </p>
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">Admin</p>
 
             <Link
               to="/resources/create"
-              className={`${linkBase} ${
-                isActive("/resources/create") ? activeClass : inactiveClass
-              }`}
+              className={`${linkBase} ${isActive("/resources/create") ? activeClass : inactiveClass}`}
             >
               Create Resource
             </Link>
 
             <Link
               to="/bookings/all"
-              className={`${linkBase} ${
-                isActive("/bookings/all") ? activeClass : inactiveClass
-              }`}
+              className={`${linkBase} ${isActive("/bookings/all") ? activeClass : inactiveClass}`}
             >
               Manage Bookings
             </Link>
 
             <Link
-              to="/tickets/manage"
-              className={`${linkBase} ${
-                isActive("/tickets/manage") ? activeClass : inactiveClass
-              }`}
+              to="/tickets/my"
+              className={`${linkBase} ${isActive("/tickets/my") ? activeClass : inactiveClass}`}
+            >
+              My Tickets
+            </Link>
+
+            <Link
+              to="/tickets/all"
+              className={`${linkBase} ${isActive("/tickets/all") ? activeClass : inactiveClass}`}
             >
               Manage Tickets
             </Link>
@@ -135,15 +113,11 @@ function AppSidebar() {
 
         {user.role === "TECHNICIAN" && (
           <>
-            <p className="mt-6 px-2 text-xs uppercase text-slate-500">
-              Tickets
-            </p>
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">Tickets</p>
 
             <Link
-              to="/tickets/manage"
-              className={`${linkBase} ${
-                isActive("/tickets/manage") ? activeClass : inactiveClass
-              }`}
+              to="/tickets/all"
+              className={`${linkBase} ${isActive("/tickets/all") ? activeClass : inactiveClass}`}
             >
               Manage Tickets
             </Link>

@@ -8,9 +8,6 @@ import lombok.Data;
 @Data
 public class TicketRequestDto {
 
-    @NotNull(message = "Reporter ID is required")
-    private Long reporterId;
-
     private Long resourceId;
 
     @NotBlank(message = "Location is required")

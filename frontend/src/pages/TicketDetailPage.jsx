@@ -12,58 +12,39 @@ import {
   uploadAttachment,
   deleteAttachment,
 } from "../api/ticketApi";
+import { getAuthConfig } from "../api/authHelper";
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import StatusBadge from "../components/ui/StatusBadge";
 import PriorityBadge from "../components/ui/PriorityBadge";
 
-const STATUS_STYLES = {
-  OPEN:        "bg-blue-500/15 text-blue-300 border-blue-500/30",
-  IN_PROGRESS: "bg-yellow-500/15 text-yellow-300 border-yellow-500/30",
-  RESOLVED:    "bg-green-500/15 text-green-300 border-green-500/30",
-  CLOSED:      "bg-slate-500/15 text-slate-400 border-slate-500/30",
-  REJECTED:    "bg-red-500/15 text-red-300 border-red-500/30",
-};
-
-const PRIORITY_STYLES = {
-  LOW: "bg-slate-500/15 text-slate-300 border-slate-500/30",
-  MEDIUM: "bg-yellow-500/15 text-yellow-300 border-yellow-500/30",
-  HIGH: "bg-orange-500/15 text-orange-300 border-orange-500/30",
-  CRITICAL: "bg-red-500/15 text-red-300 border-red-500/30",
-};
-
 function TicketDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, credentials, buildBasicAuthHeader } = useAuth();
 
-  const [ticket, setTicket]           = useState(null);
-  const [comments, setComments]       = useState([]);
-  const [attachments, setAttachments] = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState("");
-
-  // comment form
-  const [commentText, setCommentText]   = useState("");
+  const [ticket, setTicket]                 = useState(null);
+  const [comments, setComments]             = useState([]);
+  const [attachments, setAttachments]       = useState([]);
+  const [loading, setLoading]               = useState(true);
+  const [error, setError]                   = useState("");
+  const [commentText, setCommentText]       = useState("");
   const [commentLoading, setCommentLoading] = useState(false);
-  const [editingId, setEditingId]       = useState(null);
-  const [editText, setEditText]         = useState("");
+  const [editingId, setEditingId]           = useState(null);
+  const [editText, setEditText]             = useState("");
+  const [uploading, setUploading]           = useState(false);
+  const [attachError, setAttachError]       = useState("");
 
-  // attachment
-  const [uploading, setUploading] = useState(false);
-  const [attachError, setAttachError] = useState("");
+  const authConfig = getAuthConfig(credentials, buildBasicAuthHeader);
 
-  const authHeader = buildBasicAuthHeader(credentials.email, credentials.password);
-
-  // ── fetch all data ─────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchAll = async () => {
       try {
         const [tRes, cRes, aRes] = await Promise.all([
-          getTicketById(id, authHeader),
-          getComments(id, authHeader),
-          getAttachments(id, authHeader),
+          getTicketById(id, authConfig),
+          getComments(id, authConfig),
+          getAttachments(id, authConfig),
         ]);
         setTicket(tRes.data);
         setComments(cRes.data);
@@ -77,12 +58,11 @@ function TicketDetailPage() {
     fetchAll();
   }, [id]);
 
-  // ── comments ───────────────────────────────────────────────────────────────
   const handleAddComment = async () => {
     if (!commentText.trim()) return;
     setCommentLoading(true);
     try {
-      const res = await addComment(id, { authorId: user.id, content: commentText }, authHeader);
+      const res = await addComment(id, { content: commentText }, authConfig);
       setComments((prev) => [...prev, res.data]);
       setCommentText("");
     } catch (err) {
@@ -95,7 +75,7 @@ function TicketDetailPage() {
   const handleUpdateComment = async (commentId) => {
     if (!editText.trim()) return;
     try {
-      const res = await updateComment(id, commentId, user.id, { content: editText }, authHeader);
+      const res = await updateComment(id, commentId, { content: editText }, authConfig);
       setComments((prev) => prev.map((c) => (c.id === commentId ? res.data : c)));
       setEditingId(null);
       setEditText("");
@@ -107,14 +87,13 @@ function TicketDetailPage() {
   const handleDeleteComment = async (commentId) => {
     if (!window.confirm("Delete this comment?")) return;
     try {
-      await deleteComment(id, commentId, user.id, authHeader);
+      await deleteComment(id, commentId, authConfig);
       setComments((prev) => prev.filter((c) => c.id !== commentId));
     } catch (err) {
       alert(err?.response?.data?.message || "Failed to delete comment.");
     }
   };
 
-  // ── attachments ────────────────────────────────────────────────────────────
   const handleUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -125,7 +104,7 @@ function TicketDetailPage() {
     }
     setUploading(true);
     try {
-      const res = await uploadAttachment(id, file, authHeader);
+      const res = await uploadAttachment(id, file, authConfig);
       setAttachments((prev) => [...prev, res.data]);
     } catch (err) {
       setAttachError(err?.response?.data?.message || "Upload failed.");
@@ -138,7 +117,7 @@ function TicketDetailPage() {
   const handleDeleteAttachment = async (attachmentId) => {
     if (!window.confirm("Delete this attachment?")) return;
     try {
-      await deleteAttachment(id, attachmentId, authHeader);
+      await deleteAttachment(id, attachmentId, authConfig);
       setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
     } catch (err) {
       alert(err?.response?.data?.message || "Failed to delete attachment.");
@@ -153,14 +132,14 @@ function TicketDetailPage() {
 
   const handleDownloadAttachment = async (att) => {
     try {
+      const headers = credentials?.email
+        ? { Authorization: buildBasicAuthHeader(credentials.email, credentials.password) }
+        : {};
       const response = await fetch(getAttachmentUrl(att), {
-        headers: { Authorization: authHeader },
+        headers,
+        credentials: "include",
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to download file.");
-      }
-
+      if (!response.ok) throw new Error("Failed to download file.");
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -175,15 +154,14 @@ function TicketDetailPage() {
     }
   };
 
-  // ── render ─────────────────────────────────────────────────────────────────
   if (loading) return <p className="p-8 text-slate-400 animate-pulse">Loading ticket…</p>;
   if (error)   return <p className="p-8 text-red-400">{error}</p>;
   if (!ticket) return null;
 
-  const isOwner    = user.id === ticket.reporterId;
-  const isAdmin    = user.role === "ADMIN";
-  const isTech     = user.role === "TECHNICIAN";
-  const canManage  = isAdmin || isTech;
+  const isOwner   = user?.id === ticket.reporterId;
+  const isAdmin   = user?.role === "ADMIN";
+  const isTech    = user?.role === "TECHNICIAN";
+  const canManage = isAdmin || isTech;
 
   return (
     <PageShell
@@ -200,23 +178,21 @@ function TicketDetailPage() {
         </div>
       }
     >
-      {/* ── TICKET INFO ── */}
       <Card>
         <div className="flex flex-wrap gap-3 mb-4">
-          <StatusBadge status={ticket.status} className="px-3 py-1 text-xs" />
-          <PriorityBadge priority={ticket.priority} className="px-3 py-1 text-xs" />
+          <StatusBadge status={ticket.status} />
+          <PriorityBadge priority={ticket.priority} />
         </div>
-
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Description</p>
             <p className="text-sm text-slate-200 leading-relaxed">{ticket.description}</p>
           </div>
           <div className="space-y-3">
-            <Info label="Reported by"    value={ticket.reporterName} />
-            <Info label="Location"       value={ticket.locationText} />
-            <Info label="Contact"        value={ticket.preferredContact} />
-            <Info label="Submitted"      value={new Date(ticket.createdAt).toLocaleString("en-GB")} />
+            <Info label="Reported by"  value={ticket.reporterName} />
+            <Info label="Location"     value={ticket.locationText} />
+            <Info label="Contact"      value={ticket.preferredContact} />
+            <Info label="Submitted"    value={new Date(ticket.createdAt).toLocaleString("en-GB")} />
             {ticket.assignedTechnicianName && (
               <Info label="Technician" value={ticket.assignedTechnicianName} highlight />
             )}
@@ -227,7 +203,6 @@ function TicketDetailPage() {
         </div>
       </Card>
 
-      {/* ── ATTACHMENTS ── */}
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-base font-semibold text-slate-100">
@@ -235,17 +210,20 @@ function TicketDetailPage() {
           </h2>
           {attachments.length < 3 && (isOwner || canManage) && (
             <label className="inline-flex items-center gap-2 cursor-pointer rounded-2xl border border-slate-700 bg-slate-800 px-3 py-2 text-xs text-slate-300 hover:bg-slate-700 transition">
-              {uploading ? "Uploading..." : "+ Upload Attachment"}
-              <input type="file" accept="image/*,application/pdf,text/csv,.csv,application/vnd.ms-excel,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,.xlsx,application/msword,.doc,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx" className="hidden" onChange={handleUpload} disabled={uploading} />
+              {uploading ? "Uploading..." : "+ Upload"}
+              <input
+                type="file"
+                accept="image/*,application/pdf,.csv,.xls,.xlsx,.doc,.docx"
+                className="hidden"
+                onChange={handleUpload}
+                disabled={uploading}
+              />
             </label>
           )}
         </div>
 
         {attachError && <p className="text-xs text-red-400 mb-3">{attachError}</p>}
-
-        {attachments.length === 0 && (
-          <p className="text-sm text-slate-500">No attachments yet.</p>
-        )}
+        {attachments.length === 0 && <p className="text-sm text-slate-500">No attachments yet.</p>}
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {attachments.map((att) => (
@@ -257,41 +235,14 @@ function TicketDetailPage() {
             >
               {isImageAttachment(att) ? (
                 <>
-                  <a href={getAttachmentUrl(att)} target="_blank" rel="noopener noreferrer">
-                    <img
-                      src={getAttachmentUrl(att)}
-                      alt={att.originalFileName}
-                      className="w-full h-32 object-cover"
-                    />
-                  </a>
+                  <img src={getAttachmentUrl(att)} alt={att.originalFileName} className="w-full h-32 object-cover" />
                   <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-2">
                     <p className="text-xs text-slate-200 px-2 text-center line-clamp-2">{att.originalFileName}</p>
                     <div className="flex items-center gap-3">
-                      <a
-                        href={getAttachmentUrl(att)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-cyan-300 hover:text-cyan-200"
-                      >
-                        Open
-                      </a>
-                      <a
-                        href={getAttachmentUrl(att)}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleDownloadAttachment(att);
-                        }}
-                        className="text-xs text-emerald-300 hover:text-emerald-200"
-                      >
-                        Download
-                      </a>
+                      <a href={getAttachmentUrl(att)} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-300 hover:text-cyan-200">Open</a>
+                      <button onClick={() => handleDownloadAttachment(att)} className="text-xs text-emerald-300 hover:text-emerald-200">Download</button>
                       {(isOwner || canManage) && (
-                        <button
-                          onClick={() => handleDeleteAttachment(att.id)}
-                          className="text-xs text-red-400 hover:text-red-300"
-                        >
-                          Delete
-                        </button>
+                        <button onClick={() => handleDeleteAttachment(att.id)} className="text-xs text-red-400 hover:text-red-300">Delete</button>
                       )}
                     </div>
                   </div>
@@ -300,31 +251,10 @@ function TicketDetailPage() {
                 <div className="p-4 h-32 flex flex-col justify-between">
                   <p className="text-xs text-slate-200 line-clamp-2">{att.originalFileName}</p>
                   <div className="flex items-center gap-3">
-                    <a
-                      href={getAttachmentUrl(att)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-cyan-300 hover:text-cyan-200"
-                    >
-                      Open
-                    </a>
-                    <a
-                      href={getAttachmentUrl(att)}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        handleDownloadAttachment(att);
-                      }}
-                      className="text-xs text-emerald-300 hover:text-emerald-200"
-                    >
-                      Download
-                    </a>
+                    <a href={getAttachmentUrl(att)} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-300 hover:text-cyan-200">Open</a>
+                    <button onClick={() => handleDownloadAttachment(att)} className="text-xs text-emerald-300 hover:text-emerald-200">Download</button>
                     {(isOwner || canManage) && (
-                      <button
-                        onClick={() => handleDeleteAttachment(att.id)}
-                        className="text-xs text-red-400 hover:text-red-300"
-                      >
-                        Delete
-                      </button>
+                      <button onClick={() => handleDeleteAttachment(att.id)} className="text-xs text-red-400 hover:text-red-300">Delete</button>
                     )}
                   </div>
                 </div>
@@ -334,18 +264,15 @@ function TicketDetailPage() {
         </div>
       </Card>
 
-      {/* ── COMMENTS ── */}
       <Card>
         <h2 className="text-base font-semibold text-slate-100 mb-4">
           Comments <span className="text-slate-500 font-normal">({comments.length})</span>
         </h2>
 
         <div className="space-y-3 mb-5">
-          {comments.length === 0 && (
-            <p className="text-sm text-slate-500">No comments yet.</p>
-          )}
+          {comments.length === 0 && <p className="text-sm text-slate-500">No comments yet.</p>}
           {comments.map((c) => {
-            const canEdit = c.authorId === user.id || isAdmin;
+            const canEdit = c.authorId === user?.id || isAdmin;
             return (
               <motion.div
                 key={c.id}
@@ -355,11 +282,8 @@ function TicketDetailPage() {
               >
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-medium text-orange-300">{c.authorName}</p>
-                  <p className="text-xs text-slate-500">
-                    {new Date(c.createdAt).toLocaleString("en-GB")}
-                  </p>
+                  <p className="text-xs text-slate-500">{new Date(c.createdAt).toLocaleString("en-GB")}</p>
                 </div>
-
                 {editingId === c.id ? (
                   <div className="space-y-2">
                     <textarea
@@ -399,7 +323,6 @@ function TicketDetailPage() {
           })}
         </div>
 
-        {/* Add comment */}
         <div className="flex gap-3">
           <textarea
             value={commentText}
