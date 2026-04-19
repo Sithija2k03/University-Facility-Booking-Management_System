@@ -28,7 +28,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = true)
+    @Column
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -58,6 +58,22 @@ public class User {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
+
+        if (role == null) {
+            role = RoleType.USER;
+        }
+
+        if (provider == null) {
+            provider = AuthProvider.LOCAL;
+        }
+
+        if (emailVerified == null) {
+            emailVerified = false;
+        }
+
+        if (accountEnabled == null) {
+            accountEnabled = true;
+        }
     }
 
     @PreUpdate
