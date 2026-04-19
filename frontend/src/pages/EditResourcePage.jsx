@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import axiosClient from "../api/axiosClient";
 import { useAuth } from "../auth/AuthContext";
+import { getAuthConfig } from "../api/authHelper";
+import { getResourceById, updateResource } from "../api/resourceApi";
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -33,20 +34,12 @@ function EditResourcePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const authHeader = buildBasicAuthHeader(
-    credentials.email,
-    credentials.password
-  );
+  const authConfig = getAuthConfig(credentials, buildBasicAuthHeader);
 
   useEffect(() => {
     const fetchResource = async () => {
       try {
-        const response = await axiosClient.get(`/api/resources/id/${id}`, {
-          headers: {
-            Authorization: authHeader,
-          },
-        });
-
+        const response = await getResourceById(id, authConfig);
         const resource = response.data;
 
         setForm({
@@ -75,10 +68,7 @@ function EditResourcePage() {
   }, [id]);
 
   const handleChange = (e) => {
-    setForm((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const handleSubmit = async (e) => {
@@ -88,12 +78,21 @@ function EditResourcePage() {
 
     try {
       const payload = {
-        ...form,
+        name: form.name,
+        description: form.description,
+        type: form.type,
+        equipmentType: form.type === "EQUIPMENT" ? form.equipmentType || null : null,
         capacity:
           form.type === "EQUIPMENT" || form.capacity === ""
             ? null
             : Number(form.capacity),
-        equipmentType: form.type === "EQUIPMENT" ? form.equipmentType : null,
+        location: form.location,
+        building: form.building,
+        floor: form.floor,
+        availableFrom: form.availableFrom || null,
+        availableTo: form.availableTo || null,
+        status: form.status,
+        // Never send imageUrl — backend manages it via file upload only
       };
 
       const formData = new FormData();
@@ -106,10 +105,14 @@ function EditResourcePage() {
         formData.append("imageFile", imageFile);
       }
 
-      await axiosClient.put(`/api/resources/${id}`, formData, {
-        headers: {
-          Authorization: authHeader,
-        },
+      // For multipart, let browser set Content-Type with boundary
+      // Merge authConfig headers but remove Content-Type so browser sets it
+      const { headers: configHeaders, ...restConfig } = authConfig;
+      const { "Content-Type": _removed, ...headersWithoutContentType } = configHeaders || {};
+
+      await updateResource(id, formData, {
+        ...restConfig,
+        headers: headersWithoutContentType,
       });
 
       navigate("/resources");
@@ -131,10 +134,7 @@ function EditResourcePage() {
   }
 
   return (
-    <PageShell
-      title="Edit Resource"
-      subtitle="Update the selected campus resource."
-    >
+    <PageShell title="Edit Resource" subtitle="Update the selected campus resource.">
       <Card className="max-w-4xl">
         <form onSubmit={handleSubmit} className="grid gap-5 md:grid-cols-2">
           <TextInput
@@ -245,12 +245,9 @@ function EditResourcePage() {
                 src={`http://localhost:8080/${currentImageUrl.replace(/\\/g, "/")}`}
                 alt="Current resource"
                 className="h-44 w-full max-w-sm rounded-2xl object-cover border border-slate-800"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
               />
             )}
-
             <label className="text-sm font-medium text-slate-300">
               Replace Image
             </label>
@@ -262,11 +259,11 @@ function EditResourcePage() {
             />
           </div>
 
-          {error ? (
+          {error && (
             <div className="md:col-span-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
               {error}
             </div>
-          ) : null}
+          )}
 
           <div className="md:col-span-2 flex justify-end">
             <Button type="submit" variant="primary" disabled={submitting}>

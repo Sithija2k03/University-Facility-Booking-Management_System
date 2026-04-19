@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axiosClient from "../api/axiosClient";
 import { useAuth } from "../auth/AuthContext";
 import PageShell from "../components/layout/PageShell";
@@ -25,22 +25,31 @@ function StatusBadge({ status }) {
 }
 
 function MyBookingsPage() {
-  const { credentials, user, buildBasicAuthHeader } = useAuth();
+  const { credentials, authMode, user, buildBasicAuthHeader } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [error, setError] = useState("");
 
-  const authHeader = buildBasicAuthHeader(
-    credentials.email,
-    credentials.password
-  );
+  const requestConfig = useMemo(() => {
+    if (authMode === "basic" && credentials) {
+      return {
+        headers: {
+          Authorization: buildBasicAuthHeader(
+            credentials.email,
+            credentials.password
+          ),
+        },
+      };
+    }
+
+    return {};
+  }, [authMode, credentials, buildBasicAuthHeader]);
 
   const fetchBookings = async () => {
     try {
-      const response = await axiosClient.get(`/api/bookings/user/${user.id}`, {
-        headers: {
-          Authorization: authHeader,
-        },
-      });
+      const response = await axiosClient.get(
+        `/api/bookings/user/${user.id}`,
+        requestConfig
+      );
       setBookings(response.data);
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to load bookings");
@@ -48,17 +57,19 @@ function MyBookingsPage() {
   };
 
   useEffect(() => {
-    fetchBookings();
-  }, []);
+    if (user) {
+      fetchBookings();
+    }
+  }, [user, requestConfig]);
 
   const handleCancel = async (id) => {
     const reason = window.prompt("Enter cancellation reason (optional):") || "";
     try {
-      await axiosClient.patch(`/api/bookings/${id}/cancel?reason=${encodeURIComponent(reason)}`, null, {
-        headers: {
-          Authorization: authHeader,
-        },
-      });
+      await axiosClient.patch(
+        `/api/bookings/${id}/cancel?reason=${encodeURIComponent(reason)}`,
+        null,
+        requestConfig
+      );
       fetchBookings();
     } catch (err) {
       alert(err?.response?.data?.message || "Failed to cancel booking");

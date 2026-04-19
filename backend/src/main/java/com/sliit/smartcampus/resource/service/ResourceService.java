@@ -64,7 +64,6 @@ public class ResourceService {
     public ResourceResponse getResourceById(Long id) {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + id));
-
         return mapToResponse(resource);
     }
 
@@ -86,7 +85,6 @@ public class ResourceService {
         resource.setAvailableTo(request.getAvailableTo());
         resource.setStatus(request.getStatus() != null ? request.getStatus() : resource.getStatus());
 
-        // If a new image is uploaded, delete old one and replace it
         if (imageFile != null && !imageFile.isEmpty()) {
             deletePhysicalFileIfExists(resource.getImageUrl());
             String savedImagePath = saveResourceImage(imageFile);
@@ -99,7 +97,6 @@ public class ResourceService {
     public void deleteResource(Long id) {
         Resource resource = resourceRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Resource not found with id: " + id));
-
         deletePhysicalFileIfExists(resource.getImageUrl());
         resourceRepository.delete(resource);
     }
@@ -109,10 +106,7 @@ public class ResourceService {
                                                   String location,
                                                   Integer minCapacity,
                                                   EquipmentType equipmentType) {
-
-        List<Resource> resources = resourceRepository.findAll();
-
-        List<Resource> filtered = resources.stream()
+        return resourceRepository.findAll().stream()
                 .filter(r -> type == null || r.getType() == type)
                 .filter(r -> status == null || r.getStatus() == status)
                 .filter(r -> location == null || location.isBlank() ||
@@ -121,9 +115,6 @@ public class ResourceService {
                 .filter(r -> minCapacity == null ||
                         (r.getCapacity() != null && r.getCapacity() >= minCapacity))
                 .filter(r -> equipmentType == null || r.getEquipmentType() == equipmentType)
-                .toList();
-
-        return filtered.stream()
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -182,31 +173,27 @@ public class ResourceService {
             throw new BadRequestException("Only image files are allowed for resource image upload");
         }
 
-        long maxSize = 5 * 1024 * 1024; // 5MB
-        if (file.getSize() > maxSize) {
+        if (file.getSize() > 5 * 1024 * 1024) {
             throw new BadRequestException("Image size must not exceed 5MB");
         }
 
         try {
             Path uploadPath = Paths.get(uploadDir, "resources");
-
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
 
             String originalFileName = file.getOriginalFilename();
             String extension = "";
-
             if (originalFileName != null && originalFileName.contains(".")) {
                 extension = originalFileName.substring(originalFileName.lastIndexOf("."));
             }
 
             String storedFileName = UUID.randomUUID() + extension;
             Path filePath = uploadPath.resolve(storedFileName);
-
             Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-            return filePath.toString();
+            return "uploads/resources/" + storedFileName;
         } catch (IOException e) {
             throw new RuntimeException("Failed to store resource image: " + e.getMessage());
         }
@@ -217,10 +204,17 @@ public class ResourceService {
             return;
         }
 
+        // Skip deletion if the stored value is a URL (placeholder data from seeding)
+        if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+            return;
+        }
+
         try {
-            Files.deleteIfExists(Paths.get(filePath));
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to delete old resource image: " + e.getMessage());
+            Path path = Paths.get(filePath);
+            Files.deleteIfExists(path);
+        } catch (Exception e) {
+            // Log but don't throw — image cleanup failure should not block resource deletion
+            System.err.println("Warning: could not delete image file: " + filePath + " — " + e.getMessage());
         }
     }
 }

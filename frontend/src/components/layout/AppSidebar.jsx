@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
+import logo from "../../assets/logo.png";
 
 const linkBase =
   "flex items-center rounded-2xl px-4 py-3 text-sm font-medium transition";
@@ -18,94 +19,107 @@ function AppSidebar() {
 
   return (
     <aside className="hidden min-h-screen w-72 border-r border-slate-800 bg-slate-950/70 p-6 backdrop-blur lg:block">
-      
-      {/* HEADER */}
-      <div className="mb-8">
-        <p className="text-xs uppercase tracking-[0.25em] text-orange-400">
+      <div className="mb-10 flex flex-col items-center text-center">
+        <p className="text-xs uppercase tracking-[0.3em] text-white">
           Smart Campus
         </p>
-        <h2 className="mt-2 text-2xl font-semibold text-slate-50">
-          Operations Hub
-        </h2>
+        <img src={logo} alt="Logo" className="mt-1 h-32 w-32 object-contain" />
       </div>
 
-      {/* USER CARD */}
-      <div className="mb-8 rounded-3xl border border-slate-800 bg-slate-900/70 p-4">
-        <p className="text-sm font-medium text-slate-100">{user.name}</p>
-        <p className="mt-1 text-xs text-slate-400">{user.email}</p>
-        <span className="mt-3 inline-flex rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-medium text-orange-300">
-          {user.role}
-        </span>
-      </div>
-
-      {/* NAV */}
       <nav className="space-y-2">
         <Link
           to="/dashboard"
-          className={`${linkBase} ${
-            isActive("/dashboard") ? activeClass : inactiveClass
-          }`}
+          className={`${linkBase} ${isActive("/dashboard") ? activeClass : inactiveClass}`}
         >
           Dashboard
         </Link>
 
         <Link
           to="/resources"
-          className={`${linkBase} ${
-            isActive("/resources") ? activeClass : inactiveClass
-          }`}
+          className={`${linkBase} ${isActive("/resources") ? activeClass : inactiveClass}`}
         >
           Resources
         </Link>
 
         {user.role === "USER" && (
           <>
-            <p className="mt-6 px-2 text-xs uppercase text-slate-500">
-              Booking
-            </p>
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">Booking</p>
 
             <Link
               to="/bookings/create"
-              className={`${linkBase} ${
-                isActive("/bookings/create") ? activeClass : inactiveClass
-              }`}
+              className={`${linkBase} ${isActive("/bookings/create") ? activeClass : inactiveClass}`}
             >
               Create Booking
             </Link>
 
             <Link
               to="/bookings/my"
-              className={`${linkBase} ${
-                isActive("/bookings/my") ? activeClass : inactiveClass
-              }`}
+              className={`${linkBase} ${isActive("/bookings/my") ? activeClass : inactiveClass}`}
             >
               My Bookings
+            </Link>
+
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">Tickets</p>
+
+            <Link
+              to="/tickets/create"
+              className={`${linkBase} ${isActive("/tickets/create") ? activeClass : inactiveClass}`}
+            >
+              Create Ticket
+            </Link>
+
+            <Link
+              to="/tickets/my"
+              className={`${linkBase} ${isActive("/tickets/my") ? activeClass : inactiveClass}`}
+            >
+              My Tickets
             </Link>
           </>
         )}
 
         {user.role === "ADMIN" && (
           <>
-            <p className="mt-6 px-2 text-xs uppercase text-slate-500">
-              Admin
-            </p>
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">Admin</p>
 
             <Link
               to="/resources/create"
-              className={`${linkBase} ${
-                isActive("/resources/create") ? activeClass : inactiveClass
-              }`}
+              className={`${linkBase} ${isActive("/resources/create") ? activeClass : inactiveClass}`}
             >
               Create Resource
             </Link>
 
             <Link
               to="/bookings/all"
-              className={`${linkBase} ${
-                isActive("/bookings/all") ? activeClass : inactiveClass
-              }`}
+              className={`${linkBase} ${isActive("/bookings/all") ? activeClass : inactiveClass}`}
             >
               Manage Bookings
+            </Link>
+
+            <Link
+              to="/tickets/my"
+              className={`${linkBase} ${isActive("/tickets/my") ? activeClass : inactiveClass}`}
+            >
+              My Tickets
+            </Link>
+
+            <Link
+              to="/tickets/all"
+              className={`${linkBase} ${isActive("/tickets/all") ? activeClass : inactiveClass}`}
+            >
+              Manage Tickets
+            </Link>
+          </>
+        )}
+
+        {user.role === "TECHNICIAN" && (
+          <>
+            <p className="mt-6 px-2 text-xs uppercase text-slate-500">Tickets</p>
+
+            <Link
+              to="/tickets/all"
+              className={`${linkBase} ${isActive("/tickets/all") ? activeClass : inactiveClass}`}
+            >
+              Manage Tickets
             </Link>
           </>
         )}

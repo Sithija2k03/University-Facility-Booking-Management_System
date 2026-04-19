@@ -3,9 +3,11 @@ import ProtectedRoute from "../auth/ProtectedRoute";
 import GuestRoute from "../auth/GuestRoute";
 import LoginPage from "../pages/LoginPage";
 import RegisterPage from "../pages/RegisterPage";
+import OAuth2SuccessPage from "../pages/OAuth2SuccessPage";
 import UserDashboard from "../pages/UserDashboard";
 import AdminDashboard from "../pages/AdminDashboard";
 import TechnicianDashboard from "../pages/TechnicianDashboard";
+import ProfilePage from "../pages/ProfilePage";
 import UnauthorizedPage from "../pages/UnauthorizedPage";
 import ResourceListPage from "../pages/ResourceListPage";
 import CreateResourcePage from "../pages/CreateResourcePage";
@@ -13,8 +15,15 @@ import EditResourcePage from "../pages/EditResourcePage";
 import CreateBookingPage from "../pages/CreateBookingPage";
 import MyBookingsPage from "../pages/MyBookingsPage";
 import AllBookingsPage from "../pages/AllBookingsPage";
+import CreateTicketPage from "../pages/CreateTicketPage";
+import MyTicketsPage from "../pages/MyTicketsPage";
+import TicketDetailPage from "../pages/TicketDetailPage";
+import AllTicketsPage from "../pages/AllTicketsPage";
+import ManageTicketPage from "../pages/ManageTicketPage";
 import { useAuth } from "../auth/AuthContext";
 import AppLayout from "../components/layout/AppLayout";
+import LandingPage from "../pages/LandingPage";
+
 
 function DashboardRouter() {
   const { user } = useAuth();
@@ -36,6 +45,9 @@ function ProtectedPage({ children, allowedRoles }) {
 function AppRouter() {
   return (
     <Routes>
+      {/* Landing Page */}
+      <Route path="/" element={<LandingPage />} />
+
       {/* AUTH */}
       <Route
         path="/login"
@@ -45,7 +57,6 @@ function AppRouter() {
           </GuestRoute>
         }
       />
-
       <Route
         path="/register"
         element={
@@ -54,8 +65,8 @@ function AppRouter() {
           </GuestRoute>
         }
       />
-
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
+      <Route path="/oauth2/success" element={<OAuth2SuccessPage />} />
 
       {/* DASHBOARD */}
       <Route
@@ -63,6 +74,14 @@ function AppRouter() {
         element={
           <ProtectedPage allowedRoles={["USER", "ADMIN", "TECHNICIAN"]}>
             <DashboardRouter />
+          </ProtectedPage>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedPage allowedRoles={["USER", "ADMIN", "TECHNICIAN"]}>
+            <ProfilePage />
           </ProtectedPage>
         }
       />
@@ -76,7 +95,6 @@ function AppRouter() {
           </ProtectedPage>
         }
       />
-
       <Route
         path="/resources/create"
         element={
@@ -85,7 +103,6 @@ function AppRouter() {
           </ProtectedPage>
         }
       />
-
       <Route
         path="/resources/edit/:id"
         element={
@@ -95,6 +112,7 @@ function AppRouter() {
         }
       />
 
+      {/* BOOKINGS */}
       <Route
         path="/bookings/create"
         element={
@@ -103,7 +121,6 @@ function AppRouter() {
           </ProtectedPage>
         }
       />
-
       <Route
         path="/bookings/my"
         element={
@@ -112,7 +129,6 @@ function AppRouter() {
           </ProtectedPage>
         }
       />
-
       <Route
         path="/bookings/all"
         element={
@@ -122,6 +138,51 @@ function AppRouter() {
         }
       />
 
+      {/* TICKETS — static routes MUST come before dynamic :id routes */}
+      <Route
+        path="/tickets/create"
+        element={
+          <ProtectedPage allowedRoles={["USER", "ADMIN", "TECHNICIAN"]}>
+            <CreateTicketPage />
+          </ProtectedPage>
+        }
+      />
+      <Route
+        path="/tickets/my"
+        element={
+          <ProtectedPage allowedRoles={["USER", "ADMIN"]}>
+            <MyTicketsPage />
+          </ProtectedPage>
+        }
+      />
+      <Route
+        path="/tickets/all"
+        element={
+          <ProtectedPage allowedRoles={["ADMIN", "TECHNICIAN"]}>
+            <AllTicketsPage />
+          </ProtectedPage>
+        }
+      />
+
+      {/* Dynamic ticket routes — must come AFTER all static /tickets/* routes */}
+      <Route
+        path="/tickets/:id/manage"
+        element={
+          <ProtectedPage allowedRoles={["ADMIN", "TECHNICIAN"]}>
+            <ManageTicketPage />
+          </ProtectedPage>
+        }
+      />
+      <Route
+        path="/tickets/:id"
+        element={
+          <ProtectedPage allowedRoles={["USER", "ADMIN", "TECHNICIAN"]}>
+            <TicketDetailPage />
+          </ProtectedPage>
+        }
+      />
+
+      {/* DEFAULT */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

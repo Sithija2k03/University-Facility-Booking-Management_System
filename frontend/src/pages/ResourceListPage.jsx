@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import axiosClient from "../api/axiosClient";
 import { useAuth } from "../auth/AuthContext";
+import { getAuthConfig } from "../api/authHelper";
+import { getAllResources, searchResources, deleteResource } from "../api/resourceApi";
 import PageShell from "../components/layout/PageShell";
 import Card from "../components/ui/Card";
 import Button from "../components/ui/Button";
@@ -26,25 +27,19 @@ function ResourceListPage() {
     []
   );
 
+  const authConfig = useMemo(
+    () => getAuthConfig(credentials, buildBasicAuthHeader),
+    [credentials, buildBasicAuthHeader]
+  );
+
   const fetchResources = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const authHeader = buildBasicAuthHeader(
-        credentials.email,
-        credentials.password
-      );
-
-      const url = searchType
-        ? `/api/resources/search?type=${searchType}`
-        : "/api/resources";
-
-      const response = await axiosClient.get(url, {
-        headers: {
-          Authorization: authHeader,
-        },
-      });
+      const response = searchType
+        ? await searchResources({ type: searchType }, authConfig)
+        : await getAllResources(authConfig);
 
       setResources(response.data);
     } catch (err) {
@@ -55,23 +50,11 @@ function ResourceListPage() {
   };
 
   const handleDelete = async (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this resource?"
-    );
+    const confirmed = window.confirm("Are you sure you want to delete this resource?");
     if (!confirmed) return;
 
     try {
-      const authHeader = buildBasicAuthHeader(
-        credentials.email,
-        credentials.password
-      );
-
-      await axiosClient.delete(`/api/resources/${id}`, {
-        headers: {
-          Authorization: authHeader,
-        },
-      });
-
+      await deleteResource(id, authConfig);
       fetchResources();
     } catch (err) {
       alert(err?.response?.data?.message || "Failed to delete resource");
@@ -79,10 +62,8 @@ function ResourceListPage() {
   };
 
   useEffect(() => {
-    if (credentials) {
-      fetchResources();
-    }
-  }, [searchType, credentials]);
+    fetchResources();
+  }, [searchType, authConfig]);
 
   return (
     <PageShell
@@ -116,6 +97,10 @@ function ResourceListPage() {
         <Card>
           <p className="text-sm text-red-400">{error}</p>
         </Card>
+      ) : resources.length === 0 ? (
+        <Card className="text-center py-10">
+          <p className="text-sm text-slate-400">No resources found.</p>
+        </Card>
       ) : (
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {resources.map((resource, index) => (
@@ -131,9 +116,7 @@ function ResourceListPage() {
                     <h3 className="text-lg font-semibold text-slate-100">
                       {resource.name}
                     </h3>
-                    <p className="mt-1 text-sm text-slate-400">
-                      {resource.type}
-                    </p>
+                    <p className="mt-1 text-sm text-slate-400">{resource.type}</p>
                   </div>
 
                   <span className="rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-medium text-orange-300">

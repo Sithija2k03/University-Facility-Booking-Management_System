@@ -28,6 +28,11 @@ public class TicketController {
         return ticketService.getAllTickets();
     }
 
+    @GetMapping("/my")
+    public List<TicketResponseDto> getMyTickets() {
+        return ticketService.getMyTickets();
+    }
+
     @GetMapping("/{id}")
     public TicketResponseDto getTicketById(@PathVariable Long id) {
         return ticketService.getTicketById(id);

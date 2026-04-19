@@ -12,12 +12,14 @@ import com.sliit.smartcampus.ticket.repository.TicketRepository;
 import com.sliit.smartcampus.user.entity.User;
 import com.sliit.smartcampus.user.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.sliit.smartcampus.auth.security.SecurityUtils;
 import com.sliit.smartcampus.common.exception.UnauthorizedAccessException;
 
 import java.util.List;
 
 @Service
+@Transactional
 public class TicketService {
 
     private final TicketRepository ticketRepository;
@@ -38,8 +40,10 @@ public class TicketService {
     }
 
     public TicketResponseDto createTicket(TicketRequestDto dto) {
-        User reporter = userRepository.findById(dto.getReporterId())
-                .orElseThrow(() -> new RuntimeException("Reporter not found with id: " + dto.getReporterId()));
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+
+        User reporter = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new RuntimeException("Reporter not found with id: " + currentUserId));
 
         Resource resource = null;
         if (dto.getResourceId() != null) {
@@ -106,6 +110,14 @@ public class TicketService {
         }
 
         return ticketRepository.findByReporterId(reporterId)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    public List<TicketResponseDto> getMyTickets() {
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        return ticketRepository.findByReporterId(currentUserId)
                 .stream()
                 .map(this::mapToResponse)
                 .toList();
@@ -206,8 +218,7 @@ public class TicketService {
             throw new IllegalArgumentException("IN_PROGRESS tickets can only move to RESOLVED or REJECTED");
         }
 
-        if (current == TicketStatus.RESOLVED &&
-                next != TicketStatus.CLOSED) {
+        if (current == TicketStatus.RESOLVED && next != TicketStatus.CLOSED) {
             throw new IllegalArgumentException("RESOLVED tickets can only move to CLOSED");
         }
     }
