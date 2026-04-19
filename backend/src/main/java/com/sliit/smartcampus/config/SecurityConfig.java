@@ -78,6 +78,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/users/role/**").hasAnyRole("ADMIN", "TECHNICIAN")
                         .requestMatchers("/api/users/**").hasRole("ADMIN")
 
+                        .requestMatchers("/api/analytics/**").hasRole("ADMIN")
+
                         .anyRequest().authenticated()
                 )
                 .httpBasic(Customizer.withDefaults())
