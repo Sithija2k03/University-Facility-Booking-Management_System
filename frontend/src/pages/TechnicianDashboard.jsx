@@ -15,7 +15,7 @@ const taskCards = [
     title: "Assigned Tickets",
     desc: "Open the ticket workspace and review the incidents currently assigned to you.",
     actionLabel: "Open Ticket Queue",
-    path: "/tickets/manage",
+    path: "/tickets/all",
   },
   {
     title: "My Tickets",
@@ -27,7 +27,7 @@ const taskCards = [
     title: "Status Updates",
     desc: "Update progress, add technician notes, and move tickets through their lifecycle.",
     actionLabel: "Update Status",
-    path: "/tickets/manage",
+    path: "/tickets/all",
   },
   {
     title: "Resource Context",
@@ -39,7 +39,7 @@ const taskCards = [
     title: "My Ticket Activity",
     desc: "Follow comments, attachments, and issue history to respond with better context.",
     actionLabel: "Manage Tickets",
-    path: "/tickets/manage",
+    path: "/tickets/all",
   },
 ];
 
@@ -89,7 +89,7 @@ function TechnicianDashboard() {
                 </p>
 
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <Button variant="primary" onClick={() => navigate("/tickets/manage")}>
+                  <Button variant="primary" onClick={() => navigate("/tickets/all")}>
                     Open Assigned Tickets
                   </Button>
                   <Button variant="secondary" onClick={() => navigate("/tickets/my")}>
@@ -149,7 +149,6 @@ function TechnicianDashboard() {
                     <h3 className="text-lg font-semibold text-slate-100">{card.title}</h3>
                     <p className="mt-2 text-sm leading-6 text-slate-400">{card.desc}</p>
                   </div>
-
                   <div className="mt-5">
                     <Button variant="secondary" onClick={() => navigate(card.path)}>
                       {card.actionLabel}
